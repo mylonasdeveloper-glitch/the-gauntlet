@@ -134,10 +134,16 @@ textarea { resize: vertical; min-height: 80px; }
 .answer-btns { display: flex; gap: 20px; width: 100%; margin-bottom: 32px; }
 .answer-big { flex: 1; aspect-ratio: 1; max-height: 200px; border-radius: 20px; border: 2px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 56px; transition: all 0.18s; gap: 8px; }
 .answer-big .alabel { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
+.answer-big .ans-icon { font-size: 56px; color: var(--muted); transition: color 0.18s; font-style: normal; }
+.answer-big:hover .ans-icon { color: var(--text); }
 .answer-big.true-btn:hover  { background: rgba(46,204,113,0.12); border-color: var(--green); transform: scale(1.03); }
 .answer-big.false-btn:hover { background: rgba(224,60,60,0.12);  border-color: var(--red);   transform: scale(1.03); }
+.answer-big.true-btn:hover .ans-icon  { color: var(--green); }
+.answer-big.false-btn:hover .ans-icon { color: var(--red); }
 .answer-big.sel-true  { background: rgba(46,204,113,0.18); border-color: var(--green); }
 .answer-big.sel-false { background: rgba(224,60,60,0.18);  border-color: var(--red); }
+.answer-big.sel-true .ans-icon  { color: var(--green); }
+.answer-big.sel-false .ans-icon { color: var(--red); }
 
 .waiting-msg { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; letter-spacing: 1px; }
 .waiting-dots span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 3px; animation: bounce-dot 1.2s ease-in-out infinite; }
@@ -369,10 +375,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
     <div class="p-question" id="p-question">Loading...</div>
     <div class="answer-btns" id="p-ans-btns">
       <button class="answer-big true-btn" id="btn-true">
-        <span>✓</span><span class="alabel">TRUE</span>
+        <span class="ans-icon">✓</span><span class="alabel">TRUE</span>
       </button>
       <button class="answer-big false-btn" id="btn-false">
-        <span>✗</span><span class="alabel">FALSE</span>
+        <span class="ans-icon">✗</span><span class="alabel">FALSE</span>
       </button>
     </div>
     <div class="waiting-msg hidden" id="p-waiting">
@@ -491,6 +497,18 @@ function renderLB(elId, scores, players) {
 async function goHome() {
   modEndShown = false;
   stopListen();
+  // Seed initial stats if none exist yet
+  try {
+    const seedSnap = await fGet('stats');
+    if (!seedSnap.val()) {
+      await fSet('stats', {
+        recentWinner: 'Carly',
+        allTimeLeader: 'Cole',
+        allTimeWins: 3,
+        playerWins: { 'Cole': 3, 'Carly': 1 }
+      });
+    }
+  } catch(e) { /* ignore seed errors */ }
   try {
     const snap  = await fGet('stats');
     const s     = snap.val() || {};
