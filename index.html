@@ -35,10 +35,11 @@ body::before {
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: clamp(56px,12vw,110px); letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 60px rgba(240,180,41,0.4), 0 2px 0 rgba(0,0,0,0.8); line-height: 1; text-align: center; }
 .logo-sub { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-top: 6px; text-align: center; }
 
-.banner-wrap { width: 100%; max-width: 600px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 28px 0 36px; height: 44px; display: flex; align-items: center; }
-.banner-track { white-space: nowrap; animation: scroll-banner 22s linear infinite; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold-dim); letter-spacing: 2px; padding-left: 100%; }
-@keyframes scroll-banner { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-.banner-label { font-size: 10px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; padding: 0 14px; border-right: 1px solid var(--border); height: 100%; display: flex; align-items: center; flex-shrink: 0; }
+.banner-wrap { width: 100%; max-width: 600px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 28px 0 36px; height: 44px; display: flex; align-items: center; overflow: hidden; }
+.banner-scroll-area { flex: 1; overflow: hidden; height: 100%; display: flex; align-items: center; }
+.banner-track { white-space: nowrap; animation: scroll-banner 30s linear infinite; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold-dim); letter-spacing: 2px; display: inline-block; padding-left: 100%; }
+@keyframes scroll-banner { 0% { transform: translateX(0); } 100% { transform: translateX(-200%); } }
+.banner-label { font-size: 10px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; padding: 0 14px; border-right: 1px solid var(--border); height: 100%; display: flex; align-items: center; flex-shrink: 0; background: var(--surface); position: relative; z-index: 2; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 32px; border-radius: var(--radius); border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s ease; letter-spacing: 0.5px; }
 .btn-gold { background: var(--gold); color: #080a10; }
@@ -192,6 +193,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 .setup-scroll::-webkit-scrollbar { width: 4px; }
 .setup-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 .speed-tag { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.answer-context { margin-top: 10px; font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
 
 @media (max-width: 768px) {
   .mod-layout { grid-template-columns: 1fr; }
@@ -209,7 +211,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   <div class="logo-sub">True / False Trivia — Design Team Edition</div>
   <div class="banner-wrap">
     <div class="banner-label">Hall of Fame</div>
-    <div class="banner-track" id="home-banner">Loading...</div>
+    <div class="banner-scroll-area"><div class="banner-track" id="home-banner">Loading...</div></div>
   </div>
   <div class="role-cards">
     <div class="role-card" id="btn-go-mod">
@@ -296,6 +298,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
         <div class="q-text" id="mod-q-text">Loading...</div>
         <div id="mod-ans-reveal" class="hidden">
           <div class="q-answer-badge" id="mod-ans-badge">—</div>
+          <div id="mod-ans-context" class="hidden" style="margin-top:10px;font-size:13px;color:var(--muted);font-style:italic;line-height:1.5;"></div>
         </div>
       </div>
       <div class="section-label">Player Responses</div>
@@ -566,6 +569,7 @@ function renderSetupQs() {
         <button class="answer-btn ${q.answer===true?'sel-true':''}"  data-i="${i}" data-v="true">✓ TRUE</button>
         <button class="answer-btn ${q.answer===false?'sel-false':''}" data-i="${i}" data-v="false">✗ FALSE</button>
       </div>
+      <input type="text" class="q-context-input" data-i="${i}" placeholder="Answer context (optional) — shown on reveal" value="${q.context||''}" style="margin-top:10px;font-size:13px;padding:9px 12px;">
     </div>`).join('');
   el.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', () => {
     setupQs.splice(+b.dataset.i, 1); renderSetupQs();
@@ -575,6 +579,9 @@ function renderSetupQs() {
   }));
   el.querySelectorAll('.answer-btn').forEach(b => b.addEventListener('click', () => {
     setupQs[+b.dataset.i].answer = b.dataset.v === 'true'; renderSetupQs();
+  }));
+  el.querySelectorAll('.q-context-input').forEach(inp => inp.addEventListener('input', () => {
+    setupQs[+inp.dataset.i].context = inp.value;
   }));
 }
 
@@ -618,7 +625,7 @@ document.getElementById('btn-launch').addEventListener('click', async () => {
 
   await fSet('game', {
     status: 'active', currentQ: 0, totalQ: validQs.length,
-    questions: validQs.map(q => ({ text: q.text })),
+    questions: validQs.map(q => ({ text: q.text, context: q.context || '' })),
     answers:   validQs.map(q => q.answer),
     players:   setupNames, scores,
     responses: { _placeholder: true }, revealed: false,
@@ -667,8 +674,13 @@ function renderModDash() {
     const badge = document.getElementById('mod-ans-badge');
     badge.textContent = ans ? '✓ TRUE' : '✗ FALSE';
     badge.className   = `q-answer-badge ${ans ? 'true' : 'false'}`;
+    const ctx = q && q.context ? q.context : '';
+    const ctxEl = document.getElementById('mod-ans-context');
+    ctxEl.textContent = ctx;
+    ctxEl.classList.toggle('hidden', !ctx);
   } else {
     document.getElementById('mod-ans-reveal').classList.add('hidden');
+    document.getElementById('mod-ans-context').classList.add('hidden');
   }
 
   // Counts (filter out internal _placeholder key)
@@ -678,7 +690,7 @@ function renderModDash() {
   document.getElementById('answered-count').textContent = `${answered}/${total}`;
   document.getElementById('answered-count').classList.toggle('all-answered-color', allAnswered);
   document.getElementById('all-ans-msg').classList.toggle('hidden', !allAnswered);
-  document.getElementById('btn-reveal').disabled = !allAnswered || g.revealed;
+  document.getElementById('btn-reveal').disabled = g.revealed;
   document.getElementById('btn-next').disabled   = !g.revealed;
 
   // Response cards
@@ -909,6 +921,7 @@ function renderPartGame(g) {
         <div class="big-icon">${correct?'🎉':(noAns?'⏰':'😬')}</div>
         <div class="result-label">${correct?'Correct!':(noAns?'No Answer':'Wrong')}</div>
         <div class="answer-shown">Answer was: <strong>${g.answers[g.currentQ]?'TRUE':'FALSE'}</strong></div>
+        ${g.questions[g.currentQ] && g.questions[g.currentQ].context ? `<div class="answer-context">${g.questions[g.currentQ].context}</div>` : ''}
       </div>`;
     submittedForQ = -1;
   } else if (my != null) {
