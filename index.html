@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Gauntlet</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #080a10;
+  --surface: #0e1220;
+  --surface2: #151a2e;
+  --gold: #f0b429;
+  --gold-dim: #a07820;
+  --red: #e03c3c;
+  --green: #2ecc71;
+  --text: #eef0f8;
+  --muted: #5a6080;
+  --border: #1e2440;
+  --radius: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+body { min-height: 100vh; display: flex; flex-direction: column; }
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+.screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 20px; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: clamp(56px,12vw,110px); letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 60px rgba(240,180,41,0.4), 0 2px 0 rgba(0,0,0,0.8); line-height: 1; text-align: center; }
+.logo-sub { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-top: 6px; text-align: center; }
+
+.banner-wrap { width: 100%; max-width: 600px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 28px 0 36px; height: 44px; display: flex; align-items: center; }
+.banner-track { white-space: nowrap; animation: scroll-banner 22s linear infinite; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold-dim); letter-spacing: 2px; padding-left: 100%; }
+@keyframes scroll-banner { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+.banner-label { font-size: 10px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; padding: 0 14px; border-right: 1px solid var(--border); height: 100%; display: flex; align-items: center; flex-shrink: 0; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 32px; border-radius: var(--radius); border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.18s ease; letter-spacing: 0.5px; }
+.btn-gold { background: var(--gold); color: #080a10; }
+.btn-gold:hover { background: #f5c84a; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(240,180,41,0.3); }
+.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(224,60,60,0.3); }
+.btn-danger:hover { background: rgba(224,60,60,0.1); }
+.btn-sm { padding: 9px 16px; font-size: 13px; }
+.btn-lg { padding: 20px 48px; font-size: 17px; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+.role-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.role-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px 40px; cursor: pointer; transition: all 0.22s ease; text-align: center; min-width: 200px; }
+.role-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(240,180,41,0.15); }
+.role-card .icon { font-size: 40px; margin-bottom: 14px; }
+.role-card .rlabel { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 3px; color: var(--text); }
+.role-card .sublabel { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px; width: 100%; max-width: 560px; }
+.card-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--gold); margin-bottom: 24px; }
+
+input[type=text], input[type=password], textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 12px 16px; outline: none; transition: border-color 0.15s; }
+input:focus, textarea:focus { border-color: var(--gold); }
+textarea { resize: vertical; min-height: 80px; }
+.flabel { font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px; }
+.form-group { margin-bottom: 18px; }
+.error-msg { color: var(--red); font-size: 13px; margin-top: 8px; }
+
+.q-entry { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+.q-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.q-num { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--gold); letter-spacing: 2px; }
+.remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; transition: color 0.15s; padding: 0; }
+.remove-btn:hover { color: var(--red); }
+.answer-toggle { display: flex; gap: 8px; margin-top: 10px; }
+.answer-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600; letter-spacing: 1px; transition: all 0.15s; }
+.answer-btn.sel-true { background: rgba(46,204,113,0.15); border-color: var(--green); color: var(--green); }
+.answer-btn.sel-false { background: rgba(224,60,60,0.15); border-color: var(--red); color: var(--red); }
+
+.name-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.name-pill { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 13px; }
+.name-pill button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; transition: color 0.15s; line-height: 1; padding: 0; }
+.name-pill button:hover { color: var(--red); }
+
+.name-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 12px; width: 100%; max-width: 600px; }
+.name-option { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.18s; font-size: 15px; font-weight: 500; }
+.name-option:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
+
+.mod-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; width: 100%; max-width: 1100px; min-height: 100vh; padding: 28px 20px; align-items: start; }
+.section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+
+.question-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 20px; }
+.q-progress { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-bottom: 16px; }
+.q-text { font-family: 'Bebas Neue', sans-serif; font-size: clamp(22px,3.5vw,34px); letter-spacing: 2px; line-height: 1.2; color: var(--text); margin-bottom: 20px; }
+.q-answer-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 100px; font-size: 14px; font-weight: 600; }
+.q-answer-badge.true  { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+.q-answer-badge.false { background: rgba(224,60,60,0.15);  color: var(--red);   border: 1px solid rgba(224,60,60,0.3); }
+
+.responses-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(115px,1fr)); gap: 10px; margin-bottom: 20px; }
+.response-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; transition: all 0.2s; }
+.response-card.answered { border-color: var(--gold-dim); }
+.response-card.correct  { border-color: var(--green); background: rgba(46,204,113,0.08); }
+.response-card.wrong    { border-color: var(--red);   background: rgba(224,60,60,0.08); }
+.response-name   { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.response-answer { font-size: 22px; line-height: 1; }
+.response-status { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px; }
+.wait-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); animation: pulse-dot 1.4s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity:0.3 } 50% { opacity:1 } }
+
+.leaderboard { width: 100%; }
+.lb-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; margin-bottom: 8px; background: var(--surface2); border: 1px solid var(--border); }
+.lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--muted); width: 24px; text-align: center; }
+.lb-row.rank-1 { background: rgba(240,180,41,0.08); border-color: var(--gold-dim); }
+.lb-row.rank-1 .lb-rank { color: var(--gold); }
+.lb-name  { flex: 1; font-weight: 600; font-size: 14px; }
+.lb-score { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--gold); letter-spacing: 1px; }
+
+.answered-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.answered-count { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--gold); letter-spacing: 2px; }
+.answered-label { font-size: 12px; color: var(--muted); }
+.all-answered-color { color: var(--green) !important; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.participant-game { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; padding: 32px 20px; }
+.p-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+.p-name-tag { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.p-score-badge { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--gold); letter-spacing: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px 16px; }
+.p-question { font-family: 'Bebas Neue', sans-serif; font-size: clamp(24px,6vw,40px); letter-spacing: 2px; text-align: center; line-height: 1.25; margin-bottom: 40px; color: var(--text); }
+
+.answer-btns { display: flex; gap: 20px; width: 100%; margin-bottom: 32px; }
+.answer-big { flex: 1; aspect-ratio: 1; max-height: 200px; border-radius: 20px; border: 2px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 56px; transition: all 0.18s; gap: 8px; }
+.answer-big .alabel { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
+.answer-big.true-btn:hover  { background: rgba(46,204,113,0.12); border-color: var(--green); transform: scale(1.03); }
+.answer-big.false-btn:hover { background: rgba(224,60,60,0.12);  border-color: var(--red);   transform: scale(1.03); }
+.answer-big.sel-true  { background: rgba(46,204,113,0.18); border-color: var(--green); }
+.answer-big.sel-false { background: rgba(224,60,60,0.18);  border-color: var(--red); }
+
+.waiting-msg { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; letter-spacing: 1px; }
+.waiting-dots span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 3px; animation: bounce-dot 1.2s ease-in-out infinite; }
+.waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+.waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce-dot { 0%,80%,100% { transform: translateY(0) } 40% { transform: translateY(-8px) } }
+
+.reveal-result { padding: 28px 40px; border-radius: 16px; text-align: center; animation: pop-in 0.35s cubic-bezier(0.175,0.885,0.32,1.275); }
+.reveal-result.correct { background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.4); }
+.reveal-result.wrong   { background: rgba(224,60,60,0.1);  border: 1px solid rgba(224,60,60,0.3); }
+.reveal-result .big-icon    { font-size: 56px; margin-bottom: 8px; }
+.reveal-result .result-label { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; }
+.reveal-result.correct .result-label { color: var(--green); }
+.reveal-result.wrong   .result-label { color: var(--red); }
+.reveal-result .answer-shown { font-size: 14px; color: var(--muted); margin-top: 6px; }
+@keyframes pop-in { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+.end-podium { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 480px; }
+.winner-crown { font-size: 64px; animation: crown-float 2s ease-in-out infinite; }
+@keyframes crown-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.winner-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(48px,10vw,80px); letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 60px rgba(240,180,41,0.5); text-align: center; }
+.winner-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-bottom: 24px; }
+
+.sd-banner { background: rgba(224,60,60,0.1); border: 1px solid rgba(224,60,60,0.4); border-radius: 10px; padding: 12px 20px; text-align: center; margin-bottom: 20px; width: 100%; }
+.sd-banner .sd-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; color: var(--red); }
+.sd-banner .sd-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+.chip-waiting { background: rgba(90,96,128,0.2); color: var(--muted); border: 1px solid var(--border); }
+.chip-live { background: rgba(224,60,60,0.15); color: var(--red); border: 1px solid rgba(224,60,60,0.3); }
+.chip-live::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--red); animation: pulse-dot 1s infinite; }
+
+.add-player-row { display: flex; gap: 8px; margin-top: 4px; }
+.add-player-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; outline: none; transition: border-color 0.15s; }
+.add-player-row input:focus { border-color: var(--gold); }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+.text-center { text-align: center; }
+.mt-12 { margin-top: 12px; }
+.mt-20 { margin-top: 20px; }
+.mt-32 { margin-top: 32px; }
+.flex { display: flex; }
+.gap-10 { gap: 10px; }
+.w-full { width: 100%; }
+.hidden { display: none !important; }
+
+.tab-nav { display: flex; gap: 4px; background: var(--surface2); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+.tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+.tab-btn.active { background: var(--surface); color: var(--gold); border: 1px solid var(--border); }
+
+.setup-scroll { max-height: 380px; overflow-y: auto; padding-right: 4px; }
+.setup-scroll::-webkit-scrollbar { width: 4px; }
+.setup-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.speed-tag { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+@media (max-width: 768px) {
+  .mod-layout { grid-template-columns: 1fr; }
+  .mod-sidebar { order: -1; }
+  .answer-btns { flex-direction: column; }
+  .answer-big { aspect-ratio: unset; padding: 28px; max-height: unset; }
+}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="logo">The Gauntlet</div>
+  <div class="logo-sub">True / False Trivia — Design Team Edition</div>
+  <div class="banner-wrap">
+    <div class="banner-label">Hall of Fame</div>
+    <div class="banner-track" id="home-banner">Loading...</div>
+  </div>
+  <div class="role-cards">
+    <div class="role-card" id="btn-go-mod">
+      <div class="icon">🎯</div>
+      <div class="rlabel">Moderator</div>
+      <div class="sublabel">Run the game</div>
+    </div>
+    <div class="role-card" id="btn-go-part">
+      <div class="icon">⚡</div>
+      <div class="rlabel">Participant</div>
+      <div class="sublabel">Join the game</div>
+    </div>
+  </div>
+</div>
+
+<!-- MOD PASSWORD -->
+<div id="screen-mod-password" class="screen">
+  <div class="logo" style="font-size:48px">🔐</div>
+  <div style="height:8px"></div>
+  <div class="card text-center">
+    <div class="card-title" style="text-align:center">MODERATOR ACCESS</div>
+    <div class="form-group">
+      <label class="flabel">Password</label>
+      <input type="password" id="mod-pw-input" placeholder="Enter password">
+    </div>
+    <div class="error-msg hidden" id="pw-error">Incorrect password.</div>
+    <div style="height:12px"></div>
+    <button class="btn btn-gold w-full" id="btn-pw-enter">Enter</button>
+    <div style="height:12px"></div>
+    <button class="btn btn-ghost w-full" id="btn-pw-back">← Back</button>
+  </div>
+</div>
+
+<!-- MOD SETUP -->
+<div id="screen-mod-setup" class="screen" style="align-items:center;padding:32px 20px;">
+  <div style="width:100%;max-width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div>
+        <div class="logo" style="font-size:40px;text-align:left">The Gauntlet</div>
+        <div class="logo-sub" style="text-align:left">Setup</div>
+      </div>
+      <div class="chip chip-waiting">SETUP MODE</div>
+    </div>
+    <div class="tab-nav">
+      <button class="tab-btn active" id="tab-q-btn">Questions</button>
+      <button class="tab-btn" id="tab-p-btn">Players</button>
+    </div>
+    <div id="tab-q-panel">
+      <div class="section-label">Questions &amp; Answers — First to 5 wins</div>
+      <div class="setup-scroll" id="questions-list"></div>
+      <button class="btn btn-outline mt-12 w-full" id="btn-add-q">+ Add Question</button>
+    </div>
+    <div id="tab-p-panel" class="hidden">
+      <div class="section-label">Participant Names</div>
+      <div class="flex gap-10" style="margin-bottom:12px">
+        <input type="text" id="setup-name-input" placeholder="Add name">
+        <button class="btn btn-outline" style="white-space:nowrap" id="btn-setup-add-name">Add</button>
+      </div>
+      <div class="name-list" id="names-list"></div>
+    </div>
+    <hr>
+    <div class="action-row">
+      <button class="btn btn-gold btn-lg" id="btn-launch" style="flex:1">Launch Game →</button>
+      <button class="btn btn-ghost" id="btn-setup-exit">Exit</button>
+    </div>
+    <div class="error-msg hidden mt-12" id="setup-error"></div>
+  </div>
+</div>
+
+<!-- MOD GAME -->
+<div id="screen-mod-game" class="screen" style="justify-content:flex-start;align-items:flex-start;padding:0">
+  <div class="mod-layout">
+    <div class="mod-main">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="logo" style="font-size:36px;text-align:left">The Gauntlet</div>
+        <div class="chip chip-live">LIVE</div>
+      </div>
+      <div class="sd-banner hidden" id="mod-sd-banner">
+        <div class="sd-title">⚡ SUDDEN DEATH</div>
+        <div class="sd-sub">Fastest correct answer wins</div>
+      </div>
+      <div class="question-card">
+        <div class="q-progress" id="mod-q-prog">QUESTION — OF —</div>
+        <div class="q-text" id="mod-q-text">Loading...</div>
+        <div id="mod-ans-reveal" class="hidden">
+          <div class="q-answer-badge" id="mod-ans-badge">—</div>
+        </div>
+      </div>
+      <div class="section-label">Player Responses</div>
+      <div class="answered-bar">
+        <div>
+          <div class="answered-count" id="answered-count">0/0</div>
+          <div class="answered-label">answered</div>
+        </div>
+        <div id="all-ans-msg" class="hidden" style="color:var(--green);font-size:13px;font-weight:600">✓ All answered!</div>
+      </div>
+      <div class="responses-grid" id="mod-responses"></div>
+      <div class="action-row">
+        <button class="btn btn-gold" id="btn-reveal" disabled>Reveal Answer</button>
+        <button class="btn btn-outline" id="btn-next" disabled>Next Question →</button>
+        <button class="btn btn-danger" id="btn-end">End Game</button>
+      </div>
+    </div>
+    <div class="mod-sidebar">
+      <div class="section-label">Leaderboard</div>
+      <div class="leaderboard" id="mod-lb"></div>
+      <hr>
+      <div class="section-label">Add Player On The Fly</div>
+      <div class="add-player-row">
+        <input type="text" id="fly-input" placeholder="New player name">
+        <button class="btn btn-outline btn-sm" id="btn-fly-add">+ Add</button>
+      </div>
+      <div class="error-msg hidden" id="fly-error" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PARTICIPANT JOIN -->
+<div id="screen-part-join" class="screen">
+  <div class="logo" style="font-size:48px;margin-bottom:4px">The Gauntlet</div>
+  <div class="logo-sub" style="margin-bottom:32px">Select your name</div>
+  <div class="name-grid" id="name-grid"></div>
+  <div class="mt-20">
+    <button class="btn btn-ghost" id="btn-part-back">← Back</button>
+  </div>
+</div>
+
+<!-- PARTICIPANT WAIT -->
+<div id="screen-part-wait" class="screen">
+  <div class="logo" style="font-size:48px">⏳</div>
+  <div class="logo-sub" style="margin-top:8px;margin-bottom:20px">Waiting for moderator...</div>
+  <div style="font-size:32px;font-family:'Bebas Neue',sans-serif;color:var(--gold);letter-spacing:4px" id="wait-name"></div>
+  <div class="mt-32"><div class="waiting-dots"><span></span><span></span><span></span></div></div>
+</div>
+
+<!-- PARTICIPANT GAME -->
+<div id="screen-part-game" class="screen" style="justify-content:flex-start">
+  <div class="participant-game">
+    <div class="p-header">
+      <div>
+        <div class="p-name-tag" id="p-name-tag">Player</div>
+        <div class="chip chip-live" style="margin-top:4px">LIVE</div>
+      </div>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:right;margin-bottom:4px;letter-spacing:2px">SCORE</div>
+        <div class="p-score-badge" id="p-score">0</div>
+      </div>
+    </div>
+    <div class="sd-banner hidden w-full" id="p-sd-banner">
+      <div class="sd-title">⚡ SUDDEN DEATH</div>
+      <div class="sd-sub">Speed matters — answer fast!</div>
+    </div>
+    <div class="q-progress" id="p-q-prog" style="text-align:center;margin-bottom:16px">QUESTION 1</div>
+    <div class="p-question" id="p-question">Loading...</div>
+    <div class="answer-btns" id="p-ans-btns">
+      <button class="answer-big true-btn" id="btn-true">
+        <span>✓</span><span class="alabel">TRUE</span>
+      </button>
+      <button class="answer-big false-btn" id="btn-false">
+        <span>✗</span><span class="alabel">FALSE</span>
+      </button>
+    </div>
+    <div class="waiting-msg hidden" id="p-waiting">
+      <div class="waiting-dots"><span></span><span></span><span></span></div>
+      <div>Waiting for others...</div>
+    </div>
+    <div id="p-reveal-area"></div>
+  </div>
+</div>
+
+<!-- PARTICIPANT END -->
+<div id="screen-part-end" class="screen">
+  <div class="end-podium">
+    <div class="winner-crown">👑</div>
+    <div class="winner-label">Winner</div>
+    <div class="winner-name" id="p-end-winner">—</div>
+    <hr style="width:100%">
+    <div class="section-label" style="margin-top:8px">Final Scores</div>
+    <div class="leaderboard w-full" id="p-end-lb"></div>
+    <div class="mt-20"><button class="btn btn-ghost" id="btn-p-home">← Home</button></div>
+  </div>
+</div>
+
+<!-- MOD END -->
+<div id="screen-mod-end" class="screen">
+  <div class="end-podium" style="max-width:480px;width:100%">
+    <div class="winner-crown">👑</div>
+    <div class="winner-label">Game Over — Winner</div>
+    <div class="winner-name" id="mod-end-winner">—</div>
+    <hr style="width:100%">
+    <div class="section-label" style="margin-top:8px">Final Scores</div>
+    <div class="leaderboard w-full" id="mod-end-lb"></div>
+    <div class="mt-20 action-row">
+      <button class="btn btn-gold" id="btn-new-game">New Game</button>
+      <button class="btn btn-ghost" id="btn-mod-home">Exit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  FIREBASE SETUP
+  1. https://console.firebase.google.com → New project (free)
+  2. Click </> Web → Register app → skip Hosting
+  3. Paste firebaseConfig values below
+  4. Build → Realtime Database → Create → Test mode
+  5. Deploy to Vercel
+============================================================ -->
+<script type="module">
+import { initializeApp }                              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ── YOUR FIREBASE CONFIG ──────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ─────────────────────────────────────────────────────────────
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// Safe wrappers — all in module scope, no name collisions
+function fRef(path)         { return ref(db, path); }
+function fSet(path, val)    { return set(fRef(path), val); }
+function fGet(path)         { return get(fRef(path)); }
+function fUpd(path, val)    { return update(fRef(path), val); }
+function fOn(path, cb)      { return onValue(fRef(path), cb); } // returns unsubscribe
+
+// ── CONSTANTS ─────────────────────────────────────────────────
+const PASSWORD  = "leader";
+const WIN_SCORE = 5;
+
+// ── STATE ─────────────────────────────────────────────────────
+let myName       = null;
+let gameSnap     = null;   // latest value from firebase
+let unsub        = null;   // active listener unsubscribe fn
+let setupQs      = [];
+let setupNames   = [];
+let submittedForQ= -1;
+let sdTimer      = null;
+let modEndShown  = false;
+
+// ── HELPERS ───────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function stopListen() {
+  if (unsub) { unsub(); unsub = null; }
+}
+
+function getTopPlayer(scores, players) {
+  let top = null, best = -1;
+  (players || []).forEach(n => { if ((scores[n]||0) > best) { best = scores[n]||0; top = n; } });
+  return top;
+}
+
+function renderLB(elId, scores, players) {
+  const sorted = [...(players||[])].sort((a,b) => (scores[b]||0)-(scores[a]||0));
+  document.getElementById(elId).innerHTML = sorted.map((name, i) => `
+    <div class="lb-row ${i===0?'rank-1':''}">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-name">${name}</div>
+      <div class="lb-score">${scores[name]||0}</div>
+      ${i===0&&(scores[name]||0)>=WIN_SCORE ? '<span style="font-size:16px">⭐</span>' : ''}
+    </div>`).join('');
+}
+
+// ── HOME ──────────────────────────────────────────────────────
+async function goHome() {
+  modEndShown = false;
+  stopListen();
+  try {
+    const snap  = await fGet('stats');
+    const s     = snap.val() || {};
+    const rw    = s.recentWinner  || '—';
+    const al    = s.allTimeLeader || '—';
+    const aw    = s.allTimeWins   || 0;
+    document.getElementById('home-banner').textContent =
+      `🏆 Most Recent Winner: ${rw}   ·   👑 All-Time Champion: ${al} (${aw} wins)   ·   🏆 Most Recent Winner: ${rw}   ·   👑 All-Time Champion: ${al} (${aw} wins)`;
+  } catch {
+    document.getElementById('home-banner').textContent = 'No games yet — be the first champion!';
+  }
+  showScreen('screen-home');
+}
+
+document.getElementById('btn-go-mod').addEventListener('click', () => {
+  showScreen('screen-mod-password');
+  setTimeout(() => document.getElementById('mod-pw-input').focus(), 80);
+});
+
+document.getElementById('btn-go-part').addEventListener('click', joinFlow);
+
+// ── MOD PASSWORD ──────────────────────────────────────────────
+document.getElementById('btn-pw-back').addEventListener('click', goHome);
+document.getElementById('btn-pw-enter').addEventListener('click', checkPw);
+document.getElementById('mod-pw-input').addEventListener('keydown', e => { if (e.key==='Enter') checkPw(); });
+
+function checkPw() {
+  const val = document.getElementById('mod-pw-input').value;
+  if (val === PASSWORD) {
+    document.getElementById('pw-error').classList.add('hidden');
+    document.getElementById('mod-pw-input').value = '';
+    initSetup();
+  } else {
+    document.getElementById('pw-error').classList.remove('hidden');
+  }
+}
+
+// ── MOD SETUP ─────────────────────────────────────────────────
+function initSetup() {
+  setupQs    = [];
+  setupNames = [];
+  renderSetupQs();
+  renderSetupNames();
+  switchTab('q');
+  showScreen('screen-mod-setup');
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-q-panel').classList.toggle('hidden', tab!=='q');
+  document.getElementById('tab-p-panel').classList.toggle('hidden', tab!=='p');
+  document.getElementById('tab-q-btn').classList.toggle('active',  tab==='q');
+  document.getElementById('tab-p-btn').classList.toggle('active',  tab==='p');
+}
+document.getElementById('tab-q-btn').addEventListener('click', () => switchTab('q'));
+document.getElementById('tab-p-btn').addEventListener('click', () => switchTab('p'));
+
+document.getElementById('btn-add-q').addEventListener('click', () => {
+  setupQs.push({ text: '', answer: null });
+  renderSetupQs();
+});
+
+function renderSetupQs() {
+  const el = document.getElementById('questions-list');
+  if (!setupQs.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0">No questions yet.</div>`;
+    return;
+  }
+  el.innerHTML = setupQs.map((q, i) => `
+    <div class="q-entry">
+      <div class="q-entry-header">
+        <div class="q-num">Q${i+1}</div>
+        <button class="remove-btn" data-i="${i}">×</button>
+      </div>
+      <textarea placeholder="Enter question..." data-i="${i}">${q.text}</textarea>
+      <div class="answer-toggle">
+        <button class="answer-btn ${q.answer===true?'sel-true':''}"  data-i="${i}" data-v="true">✓ TRUE</button>
+        <button class="answer-btn ${q.answer===false?'sel-false':''}" data-i="${i}" data-v="false">✗ FALSE</button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', () => {
+    setupQs.splice(+b.dataset.i, 1); renderSetupQs();
+  }));
+  el.querySelectorAll('textarea').forEach(ta => ta.addEventListener('input', () => {
+    setupQs[+ta.dataset.i].text = ta.value;
+  }));
+  el.querySelectorAll('.answer-btn').forEach(b => b.addEventListener('click', () => {
+    setupQs[+b.dataset.i].answer = b.dataset.v === 'true'; renderSetupQs();
+  }));
+}
+
+document.getElementById('btn-setup-add-name').addEventListener('click', addSetupName);
+document.getElementById('setup-name-input').addEventListener('keydown', e => { if (e.key==='Enter') addSetupName(); });
+
+function addSetupName() {
+  const inp  = document.getElementById('setup-name-input');
+  const name = inp.value.trim();
+  if (!name || setupNames.includes(name)) return;
+  setupNames.push(name); inp.value = ''; renderSetupNames();
+}
+
+function renderSetupNames() {
+  const el = document.getElementById('names-list');
+  if (!setupNames.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px">No names yet.</div>`; return; }
+  el.innerHTML = setupNames.map((n,i) => `
+    <div class="name-pill">${n}<button data-i="${i}">×</button></div>`).join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    setupNames.splice(+b.dataset.i, 1); renderSetupNames();
+  }));
+}
+
+document.getElementById('btn-setup-exit').addEventListener('click', goHome);
+
+document.getElementById('btn-launch').addEventListener('click', async () => {
+  const errEl  = document.getElementById('setup-error');
+  errEl.classList.add('hidden');
+  const validQs = setupQs.filter(q => q.text.trim() && q.answer !== null);
+  if (!validQs.length) {
+    errEl.textContent = 'Add at least 1 question with an answer selected.';
+    errEl.classList.remove('hidden'); switchTab('q'); return;
+  }
+  if (!setupNames.length) {
+    errEl.textContent = 'Add at least 1 player name.';
+    errEl.classList.remove('hidden'); switchTab('p'); return;
+  }
+
+  const scores = {};
+  setupNames.forEach(n => scores[n] = 0);
+
+  await fSet('game', {
+    status: 'active', currentQ: 0, totalQ: validQs.length,
+    questions: validQs.map(q => ({ text: q.text })),
+    answers:   validQs.map(q => q.answer),
+    players:   setupNames, scores,
+    responses: { _placeholder: true }, revealed: false,
+    isSuddenDeath: false, sdWinner: '', winner: '',
+  });
+
+  modDashboard();
+});
+
+// ── MOD DASHBOARD ─────────────────────────────────────────────
+function modDashboard() {
+  modEndShown = false;
+  stopListen();
+  showScreen('screen-mod-game');
+  document.getElementById('btn-reveal').disabled = true;
+  document.getElementById('btn-next').disabled   = true;
+
+  unsub = fOn('game', snap => {
+    gameSnap = snap.val();
+    if (!gameSnap) return;
+    if (gameSnap.status === 'ended' && !modEndShown) {
+      modEndShown = true;
+      showModEnd(gameSnap);
+      return;
+    }
+    renderModDash();
+  });
+}
+
+function renderModDash() {
+  const g   = gameSnap;
+  const q   = g.questions[g.currentQ];
+  const ans = g.answers[g.currentQ];
+  const pl  = g.players   || [];
+  const rs  = g.responses || {};
+  const sc  = g.scores    || {};
+
+  document.getElementById('mod-q-prog').textContent =
+    `QUESTION ${g.currentQ+1} OF ${g.totalQ}${g.isSuddenDeath?' — SUDDEN DEATH':''}`;
+  document.getElementById('mod-q-text').textContent = q?.text || '—';
+  document.getElementById('mod-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
+
+  // Answer badge
+  if (g.revealed) {
+    document.getElementById('mod-ans-reveal').classList.remove('hidden');
+    const badge = document.getElementById('mod-ans-badge');
+    badge.textContent = ans ? '✓ TRUE' : '✗ FALSE';
+    badge.className   = `q-answer-badge ${ans ? 'true' : 'false'}`;
+  } else {
+    document.getElementById('mod-ans-reveal').classList.add('hidden');
+  }
+
+  // Counts (filter out internal _placeholder key)
+  const answered    = Object.keys(rs).filter(k => k !== '_placeholder').length;
+  const total       = pl.length;
+  const allAnswered = answered >= total && total > 0;
+  document.getElementById('answered-count').textContent = `${answered}/${total}`;
+  document.getElementById('answered-count').classList.toggle('all-answered-color', allAnswered);
+  document.getElementById('all-ans-msg').classList.toggle('hidden', !allAnswered);
+  document.getElementById('btn-reveal').disabled = !allAnswered || g.revealed;
+  document.getElementById('btn-next').disabled   = !g.revealed;
+
+  // Response cards
+  document.getElementById('mod-responses').innerHTML = pl.map(name => {
+    const r = rs[name];
+    const hasAns = r != null;
+    let cls = '', icon = `<span class="wait-dot"></span>`, status = 'waiting...', speed = '';
+    if (hasAns) {
+      icon = r.answer ? '✓' : '✗';
+      status = r.answer ? 'TRUE' : 'FALSE';
+      cls = 'answered';
+      if (g.revealed) {
+        cls = r.answer === ans ? 'correct' : 'wrong';
+        if (g.isSuddenDeath && r.time != null)
+          speed = `<div class="speed-tag">${(r.time/1000).toFixed(2)}s</div>`;
+      }
+    }
+    return `<div class="response-card ${cls}">
+      <div class="response-name">${name}</div>
+      <div class="response-answer">${icon}</div>
+      <div class="response-status">${status}</div>${speed}
+    </div>`;
+  }).join('');
+
+  renderLB('mod-lb', sc, pl);
+}
+
+// Reveal
+document.getElementById('btn-reveal').addEventListener('click', async () => {
+  const g   = gameSnap; if (!g) return;
+  const ans = g.answers[g.currentQ];
+  const pl  = g.players   || [];
+  const rs  = g.responses || {};
+  const sc  = { ...(g.scores||{}) };
+  const sdT = {};
+
+  pl.forEach(name => {
+    const r = rs[name];  // only looks up actual player names, _placeholder ignored naturally
+    if (r!=null && r.answer===ans) {
+      sc[name] = (sc[name]||0) + 1;
+      if (g.isSuddenDeath && r.time!=null) sdT[name] = r.time;
+    }
+  });
+
+  let sdWinner = '';
+  if (g.isSuddenDeath && Object.keys(sdT).length)
+    sdWinner = Object.entries(sdT).sort((a,b)=>a[1]-b[1])[0][0];
+
+  await fUpd('game', { revealed: true, scores: sc, sdWinner });
+});
+
+// Next
+document.getElementById('btn-next').addEventListener('click', async () => {
+  const g   = gameSnap; if (!g) return;
+  const sc  = g.scores  || {};
+  const pl  = g.players || [];
+
+  if (g.isSuddenDeath) {
+    if (g.sdWinner) {
+      await fUpd('game', { status: 'ended', winner: g.sdWinner }); return;
+    }
+    const ni = g.currentQ + 1;
+    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl) }); return; }
+    await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false }); return;
+  }
+
+  const winners = pl.filter(n => (sc[n]||0) >= WIN_SCORE);
+  if (winners.length === 1) { await fUpd('game', { status: 'ended', winner: winners[0] }); return; }
+  if (winners.length  >  1) {
+    const ni = g.currentQ + 1;
+    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: winners[0] }); return; }
+    await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false, isSuddenDeath: true }); return;
+  }
+
+  const ni = g.currentQ + 1;
+  if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl) }); return; }
+  await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false });
+});
+
+// End
+document.getElementById('btn-end').addEventListener('click', async () => {
+  if (!gameSnap) return;
+  const winner = getTopPlayer(gameSnap.scores||{}, gameSnap.players||[]);
+  await fUpd('game', { status: 'ended', winner });
+});
+
+// Add player on the fly
+document.getElementById('btn-fly-add').addEventListener('click', flyAdd);
+document.getElementById('fly-input').addEventListener('keydown', e => { if (e.key==='Enter') flyAdd(); });
+
+async function flyAdd() {
+  const inp   = document.getElementById('fly-input');
+  const errEl = document.getElementById('fly-error');
+  const name  = inp.value.trim();
+  errEl.classList.add('hidden');
+  if (!name) return;
+  if (!gameSnap) { errEl.textContent='No active game.'; errEl.classList.remove('hidden'); return; }
+  const players = gameSnap.players || [];
+  if (players.includes(name)) {
+    errEl.textContent = `"${name}" is already in the game.`;
+    errEl.classList.remove('hidden'); return;
+  }
+  const newPlayers = [...players, name];
+  const newScores  = { ...(gameSnap.scores||{}), [name]: 0 };
+  await fUpd('game', { players: newPlayers, scores: newScores });
+  inp.value = '';
+}
+
+// ── MOD END ───────────────────────────────────────────────────
+async function showModEnd(g) {
+  stopListen();
+  const sc     = g.scores  || {};
+  const pl     = g.players || [];
+  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl);
+  document.getElementById('mod-end-winner').textContent = winner || '—';
+  renderLB('mod-end-lb', sc, pl);
+  showScreen('screen-mod-end');
+
+  try {
+    const snap   = await fGet('stats');
+    const stats  = snap.val() || {};
+    const pWins  = stats.playerWins || {};
+    if (winner) pWins[winner] = (pWins[winner]||0) + 1;
+    let leaderName='', leaderWins=0;
+    Object.entries(pWins).forEach(([n,w]) => { if (w>leaderWins) { leaderWins=w; leaderName=n; } });
+    await fSet('stats', { recentWinner: winner||'', allTimeLeader: leaderName, allTimeWins: leaderWins, playerWins: pWins });
+  } catch(e) { console.warn('Stats failed', e); }
+}
+
+document.getElementById('btn-new-game').addEventListener('click', async () => {
+  await fSet('game', null); initSetup();
+});
+document.getElementById('btn-mod-home').addEventListener('click', async () => {
+  await fSet('game', null); goHome();
+});
+
+// ── PARTICIPANT JOIN ──────────────────────────────────────────
+async function joinFlow() {
+  try {
+    const snap = await fGet('game');
+    const g    = snap.val();
+    if (!g || g.status === 'ended') {
+      alert('No active game found. Ask the moderator to launch the game first.');
+      return;
+    }
+    renderNameGrid(g.players || []);
+    showScreen('screen-part-join');
+
+    // Keep grid updated if mod adds a player on the fly
+    stopListen();
+    unsub = fOn('game', snap2 => {
+      const g2 = snap2.val();
+      if (!g2) return;
+      // Only update the grid while still on the join screen
+      if (document.getElementById('screen-part-join').classList.contains('active')) {
+        renderNameGrid(g2.players || []);
+      }
+    });
+  } catch(e) {
+    alert('Cannot connect to game. Check your Firebase config and try again.');
+    console.error(e);
+  }
+}
+
+function renderNameGrid(players) {
+  const grid = document.getElementById('name-grid');
+  grid.innerHTML = '';
+  players.forEach(name => {
+    const div = document.createElement('div');
+    div.className = 'name-option';
+    div.textContent = name;
+    div.addEventListener('click', () => pickName(name));
+    grid.appendChild(div);
+  });
+}
+
+document.getElementById('btn-part-back').addEventListener('click', () => {
+  stopListen(); goHome();
+});
+
+function pickName(name) {
+  myName = name;
+  submittedForQ = -1;
+  sdTimer = null;
+  stopListen();
+  document.getElementById('wait-name').textContent = name;
+  document.getElementById('p-name-tag').textContent = name.toUpperCase();
+  showScreen('screen-part-wait');
+
+  unsub = fOn('game', snap => {
+    const g = snap.val();
+    if (!g) return;
+    gameSnap = g;
+    if (g.status === 'active') renderPartGame(g);
+    if (g.status === 'ended')  showPartEnd(g);
+  });
+}
+
+function renderPartGame(g) {
+  const q   = g.questions[g.currentQ];
+  const rs  = g.responses || {};
+  const my  = rs[myName];
+  showScreen('screen-part-game');
+
+  document.getElementById('p-q-prog').textContent   = `QUESTION ${g.currentQ+1} OF ${g.totalQ}`;
+  document.getElementById('p-question').textContent  = q?.text || '—';
+  document.getElementById('p-score').textContent     = g.scores?.[myName] || 0;
+  document.getElementById('p-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
+
+  // Start SD timer when new question lands and no answer yet
+  if (g.isSuddenDeath && submittedForQ !== g.currentQ && my == null && !sdTimer) {
+    sdTimer = Date.now();
+  }
+  // Reset SD timer on new question
+  if (submittedForQ !== g.currentQ && my == null) sdTimer = g.isSuddenDeath ? Date.now() : null;
+
+  const ansDiv  = document.getElementById('p-ans-btns');
+  const waitDiv = document.getElementById('p-waiting');
+  const revDiv  = document.getElementById('p-reveal-area');
+
+  if (g.revealed) {
+    ansDiv.classList.add('hidden');
+    waitDiv.classList.add('hidden');
+    const correct = my != null && my.answer === g.answers[g.currentQ];
+    const noAns   = my == null;
+    revDiv.innerHTML = `
+      <div class="reveal-result ${correct?'correct':'wrong'}">
+        <div class="big-icon">${correct?'🎉':(noAns?'⏰':'😬')}</div>
+        <div class="result-label">${correct?'Correct!':(noAns?'No Answer':'Wrong')}</div>
+        <div class="answer-shown">Answer was: <strong>${g.answers[g.currentQ]?'TRUE':'FALSE'}</strong></div>
+      </div>`;
+    submittedForQ = -1;
+  } else if (my != null) {
+    ansDiv.classList.add('hidden');
+    waitDiv.classList.remove('hidden');
+    revDiv.innerHTML = '';
+  } else {
+    // New question — reset buttons
+    if (submittedForQ !== g.currentQ) {
+      document.getElementById('btn-true').className  = 'answer-big true-btn';
+      document.getElementById('btn-false').className = 'answer-big false-btn';
+      document.getElementById('btn-true').disabled   = false;
+      document.getElementById('btn-false').disabled  = false;
+    }
+    ansDiv.classList.remove('hidden');
+    waitDiv.classList.add('hidden');
+    revDiv.innerHTML = '';
+  }
+}
+
+document.getElementById('btn-true').addEventListener('click',  () => submitAns(true));
+document.getElementById('btn-false').addEventListener('click', () => submitAns(false));
+
+async function submitAns(val) {
+  if (!gameSnap || submittedForQ === gameSnap.currentQ) return;
+  submittedForQ = gameSnap.currentQ;
+
+  const elapsed = gameSnap.isSuddenDeath && sdTimer ? Date.now() - sdTimer : null;
+
+  document.getElementById('btn-true').className  = val  ? 'answer-big true-btn sel-true'  : 'answer-big true-btn';
+  document.getElementById('btn-false').className = !val ? 'answer-big false-btn sel-false' : 'answer-big false-btn';
+  document.getElementById('btn-true').disabled   = true;
+  document.getElementById('btn-false').disabled  = true;
+  document.getElementById('p-ans-btns').classList.add('hidden');
+  document.getElementById('p-waiting').classList.remove('hidden');
+
+  const payload = { answer: val };
+  if (elapsed !== null) payload.time = elapsed;
+  await fUpd(`game/responses/${myName}`, payload);
+}
+
+function showPartEnd(g) {
+  stopListen();
+  const sc     = g.scores  || {};
+  const pl     = g.players || [];
+  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl);
+  document.getElementById('p-end-winner').textContent = winner || '—';
+  renderLB('p-end-lb', sc, pl);
+  showScreen('screen-part-end');
+}
+
+document.getElementById('btn-p-home').addEventListener('click', goHome);
+
+// ── INIT ─────────────────────────────────────────────────────
+goHome();
+</script>
+</body>
+</html>
