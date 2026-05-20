@@ -485,14 +485,27 @@ function stopListen() {
   if (unsub) { unsub(); unsub = null; }
 }
 
-function getTopPlayer(scores, players) {
-  let top = null, best = -1;
-  (players || []).forEach(n => { if ((scores[n]||0) > best) { best = scores[n]||0; top = n; } });
-  return top;
+function getTopPlayer(scores, players, times) {
+  // Sort by score desc, then by response time asc as tiebreaker
+  const sorted = [...(players||[])].sort((a, b) => {
+    const scoreDiff = (scores[b]||0) - (scores[a]||0);
+    if (scoreDiff !== 0) return scoreDiff;
+    // Tied on score — faster time wins (lower ms = better)
+    const tA = times && times[a] != null ? times[a] : Infinity;
+    const tB = times && times[b] != null ? times[b] : Infinity;
+    return tA - tB;
+  });
+  return sorted[0] || null;
 }
 
-function renderLB(elId, scores, players) {
-  const sorted = [...(players||[])].sort((a,b) => (scores[b]||0)-(scores[a]||0));
+function renderLB(elId, scores, players, times) {
+  const sorted = [...(players||[])].sort((a,b) => {
+    const sd = (scores[b]||0)-(scores[a]||0);
+    if (sd !== 0) return sd;
+    const tA = times&&times[a]!=null ? times[a] : Infinity;
+    const tB = times&&times[b]!=null ? times[b] : Infinity;
+    return tA - tB;
+  });
   document.getElementById(elId).innerHTML = sorted.map((name, i) => `
     <div class="lb-row ${i===0?'rank-1':''}">
       <div class="lb-rank">${i+1}</div>
@@ -822,7 +835,7 @@ function renderModDash() {
     </div>`;
   }).join('');
 
-  renderLB('mod-lb', sc, pl);
+  renderLB('mod-lb', sc, pl, g.responseTimes);
 }
 
 // Reveal
@@ -835,18 +848,19 @@ document.getElementById('btn-reveal').addEventListener('click', async () => {
   const sdT = {};
 
   pl.forEach(name => {
-    const r = rs[name];  // only looks up actual player names, _placeholder ignored naturally
+    const r = rs[name];
     if (r!=null && r.answer===ans) {
       sc[name] = (sc[name]||0) + 1;
-      if (g.isSuddenDeath && r.time!=null) sdT[name] = r.time;
+      if (r.time!=null) sdT[name] = r.time;  // always collect times for tiebreaking
     }
   });
 
+  // SD winner = fastest correct answerer
   let sdWinner = '';
   if (g.isSuddenDeath && Object.keys(sdT).length)
     sdWinner = Object.entries(sdT).sort((a,b)=>a[1]-b[1])[0][0];
 
-  await fUpd('game', { revealed: true, scores: sc, sdWinner });
+  await fUpd('game', { revealed: true, scores: sc, sdWinner, responseTimes: sdT });
 });
 
 // Next
@@ -860,7 +874,7 @@ document.getElementById('btn-next').addEventListener('click', async () => {
       await fUpd('game', { status: 'ended', winner: g.sdWinner }); return;
     }
     const ni = g.currentQ + 1;
-    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl) }); return; }
+    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl,g.responseTimes) }); return; }
     await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false }); return;
   }
 
@@ -873,14 +887,14 @@ document.getElementById('btn-next').addEventListener('click', async () => {
   }
 
   const ni = g.currentQ + 1;
-  if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl) }); return; }
+  if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl,g.responseTimes) }); return; }
   await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false });
 });
 
 // End
 document.getElementById('btn-end').addEventListener('click', async () => {
   if (!gameSnap) return;
-  const winner = getTopPlayer(gameSnap.scores||{}, gameSnap.players||[]);
+  const winner = getTopPlayer(gameSnap.scores||{}, gameSnap.players||[], gameSnap.responseTimes);
   await fUpd('game', { status: 'ended', winner });
 });
 
@@ -911,9 +925,9 @@ async function showModEnd(g) {
   stopListen();
   const sc     = g.scores  || {};
   const pl     = g.players || [];
-  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl);
+  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl, g.responseTimes);
   document.getElementById('mod-end-winner').textContent = winner || '—';
-  renderLB('mod-end-lb', sc, pl);
+  renderLB('mod-end-lb', sc, pl, g.responseTimes);
   showScreen('screen-mod-end');
 
   try {
@@ -1071,9 +1085,9 @@ function showPartEnd(g) {
   stopListen();
   const sc     = g.scores  || {};
   const pl     = g.players || [];
-  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl);
+  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl, g.responseTimes);
   document.getElementById('p-end-winner').textContent = winner || '—';
-  renderLB('p-end-lb', sc, pl);
+  renderLB('p-end-lb', sc, pl, g.responseTimes);
   showScreen('screen-part-end');
 }
 
