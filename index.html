@@ -55,7 +55,7 @@ body::before {
 .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
 .role-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-.role-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px 40px; cursor: pointer; transition: all 0.22s ease; text-align: center; min-width: 200px; }
+.role-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px 40px; cursor: pointer; transition: all 0.22s ease; text-align: center; min-width: 200px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
 .role-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(240,180,41,0.15); }
 .role-card .icon { font-size: 40px; margin-bottom: 14px; }
 .role-card .rlabel { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 3px; color: var(--text); }
@@ -87,7 +87,7 @@ textarea { resize: vertical; min-height: 80px; }
 .name-pill button:hover { color: var(--red); }
 
 .name-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 12px; width: 100%; max-width: 600px; }
-.name-option { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.18s; font-size: 15px; font-weight: 500; }
+.name-option { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.18s; font-size: 15px; font-weight: 500; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
 .name-option:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
 
 .mod-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; width: 100%; max-width: 1100px; min-height: 100vh; padding: 28px 20px; align-items: start; }
@@ -199,6 +199,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 .setup-scroll::-webkit-scrollbar { width: 4px; }
 .setup-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 .speed-tag { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.recent-section { margin-top: 16px; }
+.recent-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.recent-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all 0.15s; touch-action: manipulation; }
+.recent-chip:hover { border-color: var(--gold); color: var(--gold); }
+.dupe-warning { display: none; font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-top: 6px; background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.2); border-radius: 6px; padding: 5px 10px; }
 .answer-context { margin-top: 10px; font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
 
 @media (max-width: 768px) {
@@ -277,6 +282,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
         <button class="btn btn-outline" style="white-space:nowrap" id="btn-setup-add-name">Add</button>
       </div>
       <div class="name-list" id="names-list"></div>
+      <div class="recent-section" id="recent-section" style="display:none">
+        <div class="section-label" style="margin-top:16px">Recently Played</div>
+        <div class="recent-chips" id="recent-chips"></div>
+      </div>
     </div>
     <hr>
     <div class="action-row">
@@ -523,12 +532,18 @@ async function goHome() {
   showScreen('screen-home');
 }
 
-document.getElementById('btn-go-mod').addEventListener('click', () => {
+function addTapListener(id, fn) {
+  const el = document.getElementById(id);
+  let tapped = false;
+  el.addEventListener('touchend', (e) => { e.preventDefault(); tapped = true; fn(); setTimeout(()=>tapped=false,300); });
+  el.addEventListener('click', () => { if (!tapped) fn(); });
+}
+addTapListener('btn-go-mod', () => {
   showScreen('screen-mod-password');
   setTimeout(() => document.getElementById('mod-pw-input').focus(), 80);
 });
 
-document.getElementById('btn-go-part').addEventListener('click', joinFlow);
+addTapListener('btn-go-part', joinFlow);
 
 // ── MOD PASSWORD ──────────────────────────────────────────────
 document.getElementById('btn-pw-back').addEventListener('click', goHome);
@@ -547,13 +562,63 @@ function checkPw() {
 }
 
 // ── MOD SETUP ─────────────────────────────────────────────────
-function initSetup() {
+let recentPlayers = [];
+let questionLog   = [];  // array of lowercase question strings from firebase
+
+async function initSetup() {
   setupQs    = [];
   setupNames = [];
   renderSetupQs();
   renderSetupNames();
   switchTab('q');
   showScreen('screen-mod-setup');
+
+  // Load recently played names from Firebase
+  try {
+    const snap = await fGet('recentPlayers');
+    recentPlayers = snap.val() || [];
+    renderRecentPlayers();
+  } catch(e) { recentPlayers = []; }
+
+  // Load question log for dupe detection
+  try {
+    const snap = await fGet('questionLog');
+    const raw  = snap.val();
+    questionLog = raw ? Object.values(raw) : [];
+  } catch(e) { questionLog = []; }
+}
+
+function renderRecentPlayers() {
+  const section = document.getElementById('recent-section');
+  const chips   = document.getElementById('recent-chips');
+  const current = setupNames.map(n => n.toLowerCase());
+  const available = recentPlayers.filter(n => !current.includes(n.toLowerCase()));
+  if (!available.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  chips.innerHTML = '';
+  available.forEach(name => {
+    const chip = document.createElement('div');
+    chip.className = 'recent-chip';
+    chip.textContent = '+ ' + name;
+    chip.addEventListener('click', () => {
+      if (!setupNames.includes(name)) {
+        setupNames.push(name);
+        renderSetupNames();
+        renderRecentPlayers();
+      }
+    });
+    chips.appendChild(chip);
+  });
+}
+
+function checkDupes() {
+  setupQs.forEach((q, i) => {
+    const el = document.getElementById('dupe-' + i);
+    if (!el) return;
+    const normalized = q.text.trim().toLowerCase();
+    const isDupe = normalized.length > 5 && questionLog.some(prev => prev === normalized);
+    el.style.display = isDupe ? 'block' : 'none';
+  });
 }
 
 function switchTab(tab) {
@@ -588,12 +653,14 @@ function renderSetupQs() {
         <button class="answer-btn ${q.answer===false?'sel-false':''}" data-i="${i}" data-v="false">✗ FALSE</button>
       </div>
       <input type="text" class="q-context-input" data-i="${i}" placeholder="Answer context (optional) — shown on reveal" value="${q.context||''}" style="margin-top:10px;font-size:13px;padding:9px 12px;">
+      <div class="dupe-warning" id="dupe-${i}">⚠ This question has been asked before</div>
     </div>`).join('');
   el.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', () => {
     setupQs.splice(+b.dataset.i, 1); renderSetupQs();
   }));
   el.querySelectorAll('textarea').forEach(ta => ta.addEventListener('input', () => {
     setupQs[+ta.dataset.i].text = ta.value;
+    checkDupes();
   }));
   el.querySelectorAll('.answer-btn').forEach(b => b.addEventListener('click', () => {
     setupQs[+b.dataset.i].answer = b.dataset.v === 'true'; renderSetupQs();
@@ -601,6 +668,8 @@ function renderSetupQs() {
   el.querySelectorAll('.q-context-input').forEach(inp => inp.addEventListener('input', () => {
     setupQs[+inp.dataset.i].context = inp.value;
   }));
+  // Check for duplicate questions after render
+  checkDupes();
 }
 
 document.getElementById('btn-setup-add-name').addEventListener('click', addSetupName);
@@ -610,7 +679,7 @@ function addSetupName() {
   const inp  = document.getElementById('setup-name-input');
   const name = inp.value.trim();
   if (!name || setupNames.includes(name)) return;
-  setupNames.push(name); inp.value = ''; renderSetupNames();
+  setupNames.push(name); inp.value = ''; renderSetupNames(); renderRecentPlayers();
 }
 
 function renderSetupNames() {
@@ -640,6 +709,26 @@ document.getElementById('btn-launch').addEventListener('click', async () => {
 
   const scores = {};
   setupNames.forEach(n => scores[n] = 0);
+
+  // Persist recently played names (merge with existing, keep last 20 unique)
+  try {
+    const snap = await fGet('recentPlayers');
+    const existing = snap.val() || [];
+    const merged = [...new Set([...setupNames, ...existing])].slice(0, 20);
+    await fSet('recentPlayers', merged);
+  } catch(e) {}
+
+  // Log questions for dupe detection
+  try {
+    const snap = await fGet('questionLog');
+    const existing = snap.val() ? Object.values(snap.val()) : [];
+    const newEntries = validQs.map(q => q.text.trim().toLowerCase());
+    const merged = [...new Set([...existing, ...newEntries])];
+    // Store as object (Firebase won't store plain arrays reliably)
+    const logObj = {};
+    merged.forEach((q, i) => logObj[i] = q);
+    await fSet('questionLog', logObj);
+  } catch(e) {}
 
   await fSet('game', {
     status: 'active', currentQ: 0, totalQ: validQs.length,
@@ -722,7 +811,7 @@ function renderModDash() {
       cls = 'answered';
       if (g.revealed) {
         cls = r.answer === ans ? 'correct' : 'wrong';
-        if (g.isSuddenDeath && r.time != null)
+        if (r.time != null)
           speed = `<div class="speed-tag">${(r.time/1000).toFixed(2)}s</div>`;
       }
     }
@@ -918,12 +1007,10 @@ function renderPartGame(g) {
   document.getElementById('p-score').textContent     = g.scores?.[myName] || 0;
   document.getElementById('p-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
 
-  // Start SD timer when new question lands and no answer yet
-  if (g.isSuddenDeath && submittedForQ !== g.currentQ && my == null && !sdTimer) {
+  // Always track answer timing — reset on each new question
+  if (submittedForQ !== g.currentQ && my == null) {
     sdTimer = Date.now();
   }
-  // Reset SD timer on new question
-  if (submittedForQ !== g.currentQ && my == null) sdTimer = g.isSuddenDeath ? Date.now() : null;
 
   const ansDiv  = document.getElementById('p-ans-btns');
   const waitDiv = document.getElementById('p-waiting');
@@ -967,7 +1054,7 @@ async function submitAns(val) {
   if (!gameSnap || submittedForQ === gameSnap.currentQ) return;
   submittedForQ = gameSnap.currentQ;
 
-  const elapsed = gameSnap.isSuddenDeath && sdTimer ? Date.now() - sdTimer : null;
+  const elapsed = sdTimer ? Date.now() - sdTimer : null;
 
   document.getElementById('btn-true').className  = val  ? 'answer-big true-btn sel-true'  : 'answer-big true-btn';
   document.getElementById('btn-false').className = !val ? 'answer-big false-btn sel-false' : 'answer-big false-btn';
@@ -976,8 +1063,7 @@ async function submitAns(val) {
   document.getElementById('p-ans-btns').classList.add('hidden');
   document.getElementById('p-waiting').classList.remove('hidden');
 
-  const payload = { answer: val };
-  if (elapsed !== null) payload.time = elapsed;
+  const payload = { answer: val, time: elapsed !== null ? elapsed : 0 };
   await fUpd(`game/responses/${myName}`, payload);
 }
 
