@@ -465,6 +465,18 @@ function fOn(path, cb)      { return onValue(fRef(path), cb); } // returns unsub
 const PASSWORD  = "leader";
 const WIN_SCORE = 5;
 
+// Firebase keys cannot contain . # $ / [ ]
+// Sanitize player names used as object keys
+function safeKey(name) {
+  return name.replace(/[.#$\/\[\]]/g, '_');
+}
+// Map between display name and safe key
+function buildKeyMap(names) {
+  const map = {}; // safeKey -> displayName
+  names.forEach(n => { map[safeKey(n)] = n; });
+  return map;
+}
+
 // ── STATE ─────────────────────────────────────────────────────
 let myName       = null;
 let gameSnap     = null;   // latest value from firebase
@@ -500,17 +512,17 @@ function getTopPlayer(scores, players, times) {
 
 function renderLB(elId, scores, players, times) {
   const sorted = [...(players||[])].sort((a,b) => {
-    const sd = (scores[b]||0)-(scores[a]||0);
+    const sd = (scores[safeKey(b)]||0)-(scores[safeKey(a)]||0);
     if (sd !== 0) return sd;
-    const tA = times&&times[a]!=null ? times[a] : Infinity;
-    const tB = times&&times[b]!=null ? times[b] : Infinity;
+    const tA = times&&times[safeKey(a)]!=null ? times[safeKey(a)] : Infinity;
+    const tB = times&&times[safeKey(b)]!=null ? times[safeKey(b)] : Infinity;
     return tA - tB;
   });
   document.getElementById(elId).innerHTML = sorted.map((name, i) => `
     <div class="lb-row ${i===0?'rank-1':''}">
       <div class="lb-rank">${i+1}</div>
       <div class="lb-name">${name}</div>
-      <div class="lb-score">${scores[name]||0}</div>
+      <div class="lb-score">${scores[safeKey(name)]||0}</div>
       ${i===0&&(scores[name]||0)>=WIN_SCORE ? '<span style="font-size:16px">⭐</span>' : ''}
     </div>`).join('');
 }
@@ -720,39 +732,55 @@ document.getElementById('btn-launch').addEventListener('click', async () => {
     errEl.classList.remove('hidden'); switchTab('p'); return;
   }
 
-  const scores = {};
-  setupNames.forEach(n => scores[n] = 0);
+  // Show loading state
+  const launchBtn = document.getElementById('btn-launch');
+  launchBtn.disabled = true;
+  launchBtn.textContent = 'Launching...';
 
-  // Persist recently played names (merge with existing, keep last 20 unique)
   try {
-    const snap = await fGet('recentPlayers');
-    const existing = snap.val() || [];
-    const merged = [...new Set([...setupNames, ...existing])].slice(0, 20);
-    await fSet('recentPlayers', merged);
-  } catch(e) {}
+    // Build scores object — sanitize names to safe Firebase keys
+    const scores = {};
+    setupNames.forEach(n => { scores[safeKey(n)] = 0; });
 
-  // Log questions for dupe detection
-  try {
-    const snap = await fGet('questionLog');
-    const existing = snap.val() ? Object.values(snap.val()) : [];
-    const newEntries = validQs.map(q => q.text.trim().toLowerCase());
-    const merged = [...new Set([...existing, ...newEntries])];
-    // Store as object (Firebase won't store plain arrays reliably)
-    const logObj = {};
-    merged.forEach((q, i) => logObj[i] = q);
-    await fSet('questionLog', logObj);
-  } catch(e) {}
+    // Fire-and-forget pre-flight writes (don't block launch on these)
+    fGet('recentPlayers').then(snap => {
+      const existing = snap.val() || [];
+      const merged = [...new Set([...setupNames, ...existing])].slice(0, 40);
+      fSet('recentPlayers', merged).catch(() => {});
+    }).catch(() => {});
 
-  await fSet('game', {
-    status: 'active', currentQ: 0, totalQ: validQs.length,
-    questions: validQs.map(q => ({ text: q.text, context: q.context || '' })),
-    answers:   validQs.map(q => q.answer),
-    players:   setupNames, scores,
-    responses: { _placeholder: true }, revealed: false,
-    isSuddenDeath: false, sdWinner: '', winner: '',
-  });
+    fGet('questionLog').then(snap => {
+      const existing = snap.val() ? Object.values(snap.val()) : [];
+      const newEntries = validQs.map(q => q.text.trim().toLowerCase());
+      const merged = [...new Set([...existing, ...newEntries])];
+      const logObj = {};
+      merged.forEach((q, i) => logObj[i] = q);
+      fSet('questionLog', logObj).catch(() => {});
+    }).catch(() => {});
 
-  modDashboard();
+    // Write game state — this is the critical write
+    await fSet('game', {
+      status: 'active', currentQ: 0, totalQ: validQs.length,
+      questions: validQs.map(q => ({ text: q.text, context: q.context || '' })),
+      answers:   validQs.map(q => q.answer),
+      players:   setupNames,
+      scores,
+      responses: { _placeholder: true },
+      revealed:  false,
+      isSuddenDeath: false,
+      sdWinner: '',
+      winner:   '',
+      connected: {},
+    });
+
+    modDashboard();
+  } catch(e) {
+    console.error('Launch failed:', e);
+    errEl.textContent = 'Launch failed: ' + (e.message || 'Firebase write error. Check console.');
+    errEl.classList.remove('hidden');
+    launchBtn.disabled = false;
+    launchBtn.textContent = 'Launch Game →';
+  }
 });
 
 // ── MOD DASHBOARD ─────────────────────────────────────────────
@@ -783,7 +811,7 @@ function renderModDash() {
   // Only show players who have connected (selected their name)
   // Fall back to allPlayers if nobody has connected yet (e.g. local testing)
   const connected = g.connected ? Object.keys(g.connected) : [];
-  const pl  = connected.length > 0 ? allPlayers.filter(n => connected.includes(n)) : allPlayers;
+  const pl  = connected.length > 0 ? allPlayers.filter(n => connected.includes(safeKey(n))) : allPlayers;
   const rs  = g.responses || {};
   const sc  = g.scores    || {};
 
@@ -819,7 +847,7 @@ function renderModDash() {
 
   // Response cards
   document.getElementById('mod-responses').innerHTML = pl.map(name => {
-    const r = rs[name];
+    const r = rs[safeKey(name)];
     const hasAns = r != null;
     let cls = '', icon = `<span class="wait-dot"></span>`, status = 'waiting...', speed = '';
     if (hasAns) {
@@ -854,7 +882,7 @@ document.getElementById('btn-reveal').addEventListener('click', async () => {
   pl.forEach(name => {
     const r = rs[name];
     if (r!=null && r.answer===ans) {
-      sc[name] = (sc[name]||0) + 1;
+      sc[safeKey(name)] = (sc[safeKey(name)]||0) + 1;
       if (r.time!=null) sdT[name] = r.time;  // always collect times for tiebreaking
     }
   });
@@ -919,9 +947,9 @@ async function flyAdd() {
     errEl.classList.remove('hidden'); return;
   }
   const newPlayers = [...players, name];
-  const newScores  = { ...(gameSnap.scores||{}), [name]: 0 };
+  const newScores  = { ...(gameSnap.scores||{}), [safeKey(name)]: 0 };
   const connected  = gameSnap.connected || {};
-  connected[name]  = true;
+  connected[safeKey(name)]  = true;
   await fUpd('game', { players: newPlayers, scores: newScores, connected });
   inp.value = '';
 }
@@ -1011,7 +1039,7 @@ async function pickName(name) {
   try {
     const snap = await fGet('game/connected');
     const connected = snap.val() || {};
-    connected[name] = true;
+    connected[safeKey(name)] = true;
     await fUpd('game', { connected });
   } catch(e) {}
 
@@ -1027,12 +1055,12 @@ async function pickName(name) {
 function renderPartGame(g) {
   const q   = g.questions[g.currentQ];
   const rs  = g.responses || {};
-  const my  = rs[myName];
+  const my  = rs[safeKey(myName)];
   showScreen('screen-part-game');
 
   document.getElementById('p-q-prog').textContent   = `QUESTION ${g.currentQ+1} OF ${g.totalQ}`;
   document.getElementById('p-question').textContent  = q?.text || '—';
-  document.getElementById('p-score').textContent     = g.scores?.[myName] || 0;
+  document.getElementById('p-score').textContent     = g.scores?.[safeKey(myName)] || 0;
   document.getElementById('p-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
 
   // Always track answer timing — reset on each new question
@@ -1092,7 +1120,7 @@ async function submitAns(val) {
   document.getElementById('p-waiting').classList.remove('hidden');
 
   const payload = { answer: val, time: elapsed !== null ? elapsed : 0 };
-  await fUpd(`game/responses/${myName}`, payload);
+  await fUpd(`game/responses/${safeKey(myName)}`, payload);
 }
 
 function showPartEnd(g) {
