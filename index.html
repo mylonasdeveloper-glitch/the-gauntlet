@@ -779,7 +779,11 @@ function renderModDash() {
   const g   = gameSnap;
   const q   = g.questions[g.currentQ];
   const ans = g.answers[g.currentQ];
-  const pl  = g.players   || [];
+  const allPlayers = g.players || [];
+  // Only show players who have connected (selected their name)
+  // Fall back to allPlayers if nobody has connected yet (e.g. local testing)
+  const connected = g.connected ? Object.keys(g.connected) : [];
+  const pl  = connected.length > 0 ? allPlayers.filter(n => connected.includes(n)) : allPlayers;
   const rs  = g.responses || {};
   const sc  = g.scores    || {};
 
@@ -916,7 +920,9 @@ async function flyAdd() {
   }
   const newPlayers = [...players, name];
   const newScores  = { ...(gameSnap.scores||{}), [name]: 0 };
-  await fUpd('game', { players: newPlayers, scores: newScores });
+  const connected  = gameSnap.connected || {};
+  connected[name]  = true;
+  await fUpd('game', { players: newPlayers, scores: newScores, connected });
   inp.value = '';
 }
 
@@ -992,7 +998,7 @@ document.getElementById('btn-part-back').addEventListener('click', () => {
   stopListen(); goHome();
 });
 
-function pickName(name) {
+async function pickName(name) {
   myName = name;
   submittedForQ = -1;
   sdTimer = null;
@@ -1000,6 +1006,14 @@ function pickName(name) {
   document.getElementById('wait-name').textContent = name;
   document.getElementById('p-name-tag').textContent = name.toUpperCase();
   showScreen('screen-part-wait');
+
+  // Register as connected — mod dashboard tracks this list
+  try {
+    const snap = await fGet('game/connected');
+    const connected = snap.val() || {};
+    connected[name] = true;
+    await fUpd('game', { connected });
+  } catch(e) {}
 
   unsub = fOn('game', snap => {
     const g = snap.val();
