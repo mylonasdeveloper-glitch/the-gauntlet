@@ -519,17 +519,14 @@ function renderLB(elId, scores, players, times) {
 async function goHome() {
   modEndShown = false;
   stopListen();
-  // Seed initial stats if none exist yet
+  // Force-reset stats to known good state (remove after next deploy)
   try {
-    const seedSnap = await fGet('stats');
-    if (!seedSnap.val()) {
-      await fSet('stats', {
-        recentWinner: 'Carly',
-        allTimeLeader: 'Cole',
-        allTimeWins: 3,
-        playerWins: { 'Cole': 3, 'Carly': 1 }
-      });
-    }
+    await fSet('stats', {
+      recentWinner: 'Carly',
+      allTimeLeader: 'Cole',
+      allTimeWins: 3,
+      playerWins: { 'Cole': 3, 'Carly': 1 }
+    });
   } catch(e) { /* ignore seed errors */ }
   try {
     const snap  = await fGet('stats');
