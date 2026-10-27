@@ -167,9 +167,15 @@ textarea { resize: vertical; min-height: 80px; }
 .winner-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(48px,10vw,80px); letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 60px rgba(240,180,41,0.5); text-align: center; }
 .winner-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-bottom: 24px; }
 
-.sd-banner { background: rgba(224,60,60,0.1); border: 1px solid rgba(224,60,60,0.4); border-radius: 10px; padding: 12px 20px; text-align: center; margin-bottom: 20px; width: 100%; }
-.sd-banner .sd-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; color: var(--red); }
-.sd-banner .sd-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.timer { display: flex; align-items: center; gap: 14px; width: 100%; margin-bottom: 20px; }
+.timer-track { flex: 1; height: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; overflow: hidden; }
+.timer-fill { height: 100%; width: 100%; background: var(--gold); border-radius: 100px; transition: width 0.1s linear, background 0.2s; }
+.timer-num { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--gold); min-width: 28px; text-align: right; letter-spacing: 1px; line-height: 1; }
+.timer.low .timer-fill { background: var(--red); }
+.timer.low .timer-num { color: var(--red); }
+
+.points-earned { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--gold); margin-top: 6px; }
+.rank-line { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-top: 14px; }
 
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
 .chip-waiting { background: rgba(90,96,128,0.2); color: var(--muted); border: 1px solid var(--border); }
@@ -205,6 +211,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 .recent-chip:hover { border-color: var(--gold); color: var(--gold); }
 .dupe-warning { display: none; font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-top: 6px; background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.2); border-radius: 6px; padding: 5px 10px; }
 .answer-context { margin-top: 10px; font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+
+.gen-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.gen-row .btn-gold { flex: 1; }
+select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 0 12px; outline: none; cursor: pointer; }
+select:focus { border-color: var(--gold); }
+.gen-note { font-size: 12px; color: var(--gold); margin-bottom: 14px; }
+.q-cat { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted); border: 1px solid var(--border); border-radius: 100px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; text-transform: uppercase; }
+.q-entry-tools { display: flex; align-items: center; gap: 14px; }
+.swap-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; transition: color 0.15s; padding: 0; }
+.swap-btn:hover { color: var(--gold); }
+
+.lobby-players { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.lobby-pill { border-radius: 100px; padding: 8px 16px; font-size: 14px; font-weight: 500; border: 1px dashed var(--border); color: var(--muted); transition: all 0.2s; }
+.lobby-pill.joined { border: 1px solid var(--gold-dim); color: var(--gold); background: rgba(240,180,41,0.08); }
+.join-hint { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.join-hint strong { color: var(--text); }
 
 @media (max-width: 768px) {
   .mod-layout { grid-template-columns: 1fr; }
@@ -271,9 +293,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
       <button class="tab-btn" id="tab-p-btn">Players</button>
     </div>
     <div id="tab-q-panel">
-      <div class="section-label">Questions &amp; Answers — First to 5 wins</div>
+      <div class="gen-row">
+        <select id="gen-count" aria-label="How many questions">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+        <button class="btn btn-gold" id="btn-generate">🎲 Generate Questions</button>
+        <button class="btn btn-ghost" id="btn-clear-qs">Clear</button>
+      </div>
+      <div class="gen-note hidden" id="gen-note"></div>
+      <div class="section-label" style="margin-top:14px">Questions — 10s each, faster correct answers score more</div>
       <div class="setup-scroll" id="questions-list"></div>
-      <button class="btn btn-outline mt-12 w-full" id="btn-add-q">+ Add Question</button>
+      <button class="btn btn-outline mt-12 w-full" id="btn-add-q">+ Write Your Own</button>
     </div>
     <div id="tab-p-panel" class="hidden">
       <div class="section-label">Participant Names</div>
@@ -296,6 +329,38 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   </div>
 </div>
 
+<!-- MOD LOBBY -->
+<div id="screen-mod-lobby" class="screen">
+  <div style="width:100%;max-width:640px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div>
+        <div class="logo" style="font-size:40px;text-align:left">The Gauntlet</div>
+        <div class="logo-sub" style="text-align:left" id="lobby-sub">Lobby</div>
+      </div>
+      <div class="chip chip-waiting">LOBBY</div>
+    </div>
+    <div class="answered-bar">
+      <div>
+        <div class="answered-count" id="lobby-count">0/0</div>
+        <div class="answered-label">players joined</div>
+      </div>
+      <div class="join-hint" style="text-align:right">Players go to <strong id="lobby-url"></strong><br>tap Participant, then pick their name</div>
+    </div>
+    <div class="lobby-players" id="lobby-players"></div>
+    <div class="section-label">Add Player</div>
+    <div class="add-player-row">
+      <input type="text" id="lobby-add-input" placeholder="Someone not on the list?">
+      <button class="btn btn-outline btn-sm" id="btn-lobby-add">+ Add</button>
+    </div>
+    <div class="error-msg hidden" id="lobby-add-error" style="margin-top:8px"></div>
+    <hr>
+    <div class="action-row">
+      <button class="btn btn-gold btn-lg" id="btn-start" style="flex:1" disabled>Start Game →</button>
+      <button class="btn btn-ghost" id="btn-lobby-back">← Back to Setup</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOD GAME -->
 <div id="screen-mod-game" class="screen" style="justify-content:flex-start;align-items:flex-start;padding:0">
   <div class="mod-layout">
@@ -304,13 +369,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
         <div class="logo" style="font-size:36px;text-align:left">The Gauntlet</div>
         <div class="chip chip-live">LIVE</div>
       </div>
-      <div class="sd-banner hidden" id="mod-sd-banner">
-        <div class="sd-title">⚡ SUDDEN DEATH</div>
-        <div class="sd-sub">Fastest correct answer wins</div>
-      </div>
       <div class="question-card">
         <div class="q-progress" id="mod-q-prog">QUESTION — OF —</div>
         <div class="q-text" id="mod-q-text">Loading...</div>
+        <div class="timer" id="mod-timer">
+          <div class="timer-track"><div class="timer-fill" id="mod-timer-fill"></div></div>
+          <div class="timer-num" id="mod-timer-num">10</div>
+        </div>
         <div id="mod-ans-reveal" class="hidden">
           <div class="q-answer-badge" id="mod-ans-badge">—</div>
           <div id="mod-ans-context" class="hidden" style="margin-top:10px;font-size:13px;color:var(--muted);font-style:italic;line-height:1.5;"></div>
@@ -326,7 +391,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
       </div>
       <div class="responses-grid" id="mod-responses"></div>
       <div class="action-row">
-        <button class="btn btn-gold" id="btn-reveal" disabled>Reveal Answer</button>
+        <button class="btn btn-gold" id="btn-reveal" disabled>Reveal Now</button>
         <button class="btn btn-outline" id="btn-next" disabled>Next Question →</button>
         <button class="btn btn-danger" id="btn-end">End Game</button>
       </div>
@@ -358,9 +423,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 <!-- PARTICIPANT WAIT -->
 <div id="screen-part-wait" class="screen">
   <div class="logo" style="font-size:48px">⏳</div>
-  <div class="logo-sub" style="margin-top:8px;margin-bottom:20px">Waiting for moderator...</div>
+  <div class="logo-sub" style="margin-top:8px;margin-bottom:20px">Waiting for host to start…</div>
   <div style="font-size:32px;font-family:'Bebas Neue',sans-serif;color:var(--gold);letter-spacing:4px" id="wait-name"></div>
+  <div class="answered-label" style="margin-top:8px" id="wait-count"></div>
   <div class="mt-32"><div class="waiting-dots"><span></span><span></span><span></span></div></div>
+  <div class="join-hint text-center mt-32" style="max-width:320px">10 seconds per question. Answer right and fast for up to 100 points.</div>
 </div>
 
 <!-- PARTICIPANT GAME -->
@@ -376,11 +443,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
         <div class="p-score-badge" id="p-score">0</div>
       </div>
     </div>
-    <div class="sd-banner hidden w-full" id="p-sd-banner">
-      <div class="sd-title">⚡ SUDDEN DEATH</div>
-      <div class="sd-sub">Speed matters — answer fast!</div>
-    </div>
     <div class="q-progress" id="p-q-prog" style="text-align:center;margin-bottom:16px">QUESTION 1</div>
+    <div class="timer" id="p-timer">
+      <div class="timer-track"><div class="timer-fill" id="p-timer-fill"></div></div>
+      <div class="timer-num" id="p-timer-num">10</div>
+    </div>
     <div class="p-question" id="p-question">Loading...</div>
     <div class="answer-btns" id="p-ans-btns">
       <button class="answer-big true-btn" id="btn-true">
@@ -392,7 +459,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
     </div>
     <div class="waiting-msg hidden" id="p-waiting">
       <div class="waiting-dots"><span></span><span></span><span></span></div>
-      <div>Waiting for others...</div>
+      <div id="p-waiting-text">Waiting for others...</div>
+    </div>
+    <div class="reveal-result wrong hidden" id="p-timeout">
+      <div class="big-icon">⏰</div>
+      <div class="result-label">You didn't answer in time!</div>
+      <div class="answer-shown">No points this round</div>
     </div>
     <div id="p-reveal-area"></div>
   </div>
@@ -433,11 +505,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   2. Click </> Web → Register app → skip Hosting
   3. Paste firebaseConfig values below
   4. Build → Realtime Database → Create → Test mode
-  5. Deploy to Vercel
+  5. Deploy to Vercel (questions.js must sit next to index.html)
 ============================================================ -->
 <script type="module">
 import { initializeApp }                              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { QUESTION_BANK }                              from "./questions.js";
 
 // ── YOUR FIREBASE CONFIG ──────────────────────────────────────
 const firebaseConfig = {
@@ -462,8 +535,11 @@ function fUpd(path, val)    { return update(fRef(path), val); }
 function fOn(path, cb)      { return onValue(fRef(path), cb); } // returns unsubscribe
 
 // ── CONSTANTS ─────────────────────────────────────────────────
-const PASSWORD  = "leader";
-const WIN_SCORE = 5;
+const PASSWORD   = "leader";
+const ANSWER_MS  = 10000;  // time each player gets per question
+const GRACE_MS   = 1500;   // extra wait on the moderator side for slow connections before auto-reveal
+const MAX_POINTS = 100;    // correct answer given instantly
+const MIN_POINTS = 50;     // correct answer given right at the buzzer
 
 // Firebase keys cannot contain . # $ / [ ]
 // Sanitize player names used as object keys
@@ -484,7 +560,11 @@ let unsub        = null;   // active listener unsubscribe fn
 let setupQs      = [];
 let setupNames   = [];
 let submittedForQ= -1;
-let sdTimer      = null;
+let qShownAt     = null;   // when this player first saw the current question
+let timerForQ    = -1;     // question index qShownAt was set for
+let modQ         = -1;     // question index the moderator's clock is running for
+let modQStart    = 0;
+let revealedQ    = -1;     // stops the same question being scored twice
 let modEndShown  = false;
 
 // ── HELPERS ───────────────────────────────────────────────────
@@ -493,64 +573,108 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
+function isActive(id) {
+  return document.getElementById(id).classList.contains('active');
+}
+
 function stopListen() {
   if (unsub) { unsub(); unsub = null; }
 }
 
-function getTopPlayer(scores, players, times) {
-  // Sort by score desc, then by response time asc as tiebreaker
-  const sorted = [...(players||[])].sort((a, b) => {
-    const scoreDiff = (scores[b]||0) - (scores[a]||0);
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+function ordinal(n) {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// Correct answers score 100 if instant, sliding linearly to 50 at the buzzer.
+// Wrong, late or missing answers score 0.
+function pointsFor(r, correct) {
+  if (!r || r.timedOut || r.answer !== correct || !(r.time >= 0) || r.time > ANSWER_MS) return 0;
+  return Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * r.time / ANSWER_MS);
+}
+
+// Responses to the current question, keyed by safeKey — skips the placeholder
+// and any late write meant for an earlier question
+function currentResponses(g) {
+  const out = {};
+  Object.entries(g.responses || {}).forEach(([k, r]) => { if (r && r.q === g.currentQ) out[k] = r; });
+  return out;
+}
+
+// Players who have picked their name; everyone on the list if nobody has yet
+function activePlayers(g) {
+  const all       = g.players || [];
+  const connected = Object.keys(g.connected || {});
+  return connected.length ? all.filter(n => connected.includes(safeKey(n))) : all;
+}
+
+function renderTimer(prefix, msLeft) {
+  document.getElementById(`${prefix}-timer-fill`).style.width = `${100 * msLeft / ANSWER_MS}%`;
+  document.getElementById(`${prefix}-timer-num`).textContent  = Math.ceil(msLeft / 1000);
+  document.getElementById(`${prefix}-timer`).classList.toggle('low', msLeft <= 3000);
+}
+
+// Scores, responses and times are all keyed by safeKey(name), never the display name
+function rankPlayers(scores, players, times) {
+  // Sort by score desc, then by total time on correct answers asc as tiebreaker
+  return [...(players||[])].sort((a, b) => {
+    const scoreDiff = (scores[safeKey(b)]||0) - (scores[safeKey(a)]||0);
     if (scoreDiff !== 0) return scoreDiff;
-    // Tied on score — faster time wins (lower ms = better)
-    const tA = times && times[a] != null ? times[a] : Infinity;
-    const tB = times && times[b] != null ? times[b] : Infinity;
+    const tA = times && times[safeKey(a)] != null ? times[safeKey(a)] : Infinity;
+    const tB = times && times[safeKey(b)] != null ? times[safeKey(b)] : Infinity;
     return tA - tB;
   });
-  return sorted[0] || null;
+}
+
+function getTopPlayer(scores, players, times) {
+  return rankPlayers(scores, players, times)[0] || null;
+}
+
+// Highest score wins; nobody wins a game where no one scored
+function pickWinner(g) {
+  const sc  = g.scores || {};
+  const top = getTopPlayer(sc, activePlayers(g), g.totalTimes);
+  return top && sc[safeKey(top)] > 0 ? top : '';
 }
 
 function renderLB(elId, scores, players, times) {
-  const sorted = [...(players||[])].sort((a,b) => {
-    const sd = (scores[safeKey(b)]||0)-(scores[safeKey(a)]||0);
-    if (sd !== 0) return sd;
-    const tA = times&&times[safeKey(a)]!=null ? times[safeKey(a)] : Infinity;
-    const tB = times&&times[safeKey(b)]!=null ? times[safeKey(b)] : Infinity;
-    return tA - tB;
-  });
+  const sorted = rankPlayers(scores, players, times);
   document.getElementById(elId).innerHTML = sorted.map((name, i) => `
     <div class="lb-row ${i===0?'rank-1':''}">
       <div class="lb-rank">${i+1}</div>
-      <div class="lb-name">${name}</div>
+      <div class="lb-name">${esc(name)}</div>
       <div class="lb-score">${scores[safeKey(name)]||0}</div>
-      ${i===0&&(scores[name]||0)>=WIN_SCORE ? '<span style="font-size:16px">⭐</span>' : ''}
     </div>`).join('');
+}
+
+// All-time champions — everyone tied on the most wins
+// playerWins is keyed by safeKey; playerNames maps those keys back to display names
+function getChampions(pWins, pNames) {
+  const wins  = Math.max(0, ...Object.values(pWins||{}));
+  const names = Object.keys(pWins||{})
+    .filter(k => wins > 0 && pWins[k] === wins)
+    .map(k => (pNames||{})[k] || k);
+  return { names, wins };
 }
 
 // ── HOME ──────────────────────────────────────────────────────
 async function goHome() {
   modEndShown = false;
   stopListen();
-  // Seed stats only if none exist yet
-  try {
-    const seedSnap = await fGet('stats');
-    if (!seedSnap.val()) {
-      await fSet('stats', {
-        recentWinner: 'Carly',
-        allTimeLeader: 'Cole',
-        allTimeWins: 3,
-        playerWins: { 'Cole': 3, 'Carly': 1 }
-      });
-    }
-  } catch(e) { /* ignore seed errors */ }
   try {
     const snap  = await fGet('stats');
     const s     = snap.val() || {};
     const rw    = s.recentWinner  || '—';
-    const al    = s.allTimeLeader || '—';
-    const aw    = s.allTimeWins   || 0;
+    const champ = getChampions(s.playerWins, s.playerNames);
+    const al    = champ.names.join(' & ') || '—';
+    const aw    = `${champ.wins} win${champ.wins===1?'':'s'}`;
+    const title = champ.names.length > 1 ? 'All-Time Champions' : 'All-Time Champion';
     document.getElementById('home-banner').textContent =
-      `🏆 Most Recent Winner: ${rw}   ·   👑 All-Time Champion: ${al} (${aw} wins)   ·   🏆 Most Recent Winner: ${rw}   ·   👑 All-Time Champion: ${al} (${aw} wins)`;
+      `🏆 Most Recent Winner: ${rw}   ·   👑 ${title}: ${al} (${aw})   ·   🏆 Most Recent Winner: ${rw}   ·   👑 ${title}: ${al} (${aw})`;
   } catch {
     document.getElementById('home-banner').textContent = 'No games yet — be the first champion!';
   }
@@ -595,7 +719,9 @@ async function initSetup() {
   setupNames = [];
   renderSetupQs();
   renderSetupNames();
+  showGenNote('');
   switchTab('q');
+  resetLaunchBtn();
   showScreen('screen-mod-setup');
 
   // Load recently played names from Firebase
@@ -611,6 +737,12 @@ async function initSetup() {
     const raw  = snap.val();
     questionLog = raw ? Object.values(raw) : [];
   } catch(e) { questionLog = []; }
+}
+
+function resetLaunchBtn() {
+  const btn = document.getElementById('btn-launch');
+  btn.disabled = false;
+  btn.textContent = 'Launch Game →';
 }
 
 function renderRecentPlayers() {
@@ -660,26 +792,105 @@ document.getElementById('btn-add-q').addEventListener('click', () => {
   renderSetupQs();
 });
 
+// ── QUESTION GENERATOR ────────────────────────────────────────
+const BANK = Object.entries(QUESTION_BANK).flatMap(([cat, qs]) =>
+  qs.map(([answer, text, context]) => ({ cat, text, answer, context })));
+const norm = s => s.trim().toLowerCase();
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Pick n questions, rotating through categories and keeping trues and falses roughly even
+function spreadPick(candidates, n) {
+  const byCat = {};
+  shuffle([...candidates]).forEach(q => (byCat[q.cat] ||= []).push(q));
+  const cats  = shuffle(Object.keys(byCat));
+  const order = [];
+  while (cats.some(c => byCat[c].length))
+    cats.forEach(c => { if (byCat[c].length) order.push(byCat[c].pop()); });
+
+  const picked = [], cap = Math.ceil(n / 2), count = { true: 0, false: 0 };
+  for (const q of order) {
+    if (picked.length >= n) break;
+    if (count[q.answer] < cap) { picked.push(q); count[q.answer]++; }
+  }
+  // Not enough of one answer left to stay balanced — top up with whatever remains
+  for (const q of order) {
+    if (picked.length >= n) break;
+    if (!picked.includes(q)) picked.push(q);
+  }
+  return shuffle(picked);
+}
+
+// Questions never asked in a past game (questionLog) come first; once the bank
+// runs dry, previously asked ones fill the gap. Never repeats one already in the list.
+function pickQuestions(n) {
+  const inList = new Set(setupQs.map(q => norm(q.text)));
+  const asked  = new Set(questionLog);
+  const unused = BANK.filter(q => !inList.has(norm(q.text)));
+  const picked = spreadPick(unused.filter(q => !asked.has(norm(q.text))), n);
+  const short  = n - picked.length;
+  if (short > 0) picked.push(...spreadPick(unused.filter(q => asked.has(norm(q.text))), short));
+  return { picked, repeats: short > 0 };
+}
+
+function showGenNote(msg) {
+  const el = document.getElementById('gen-note');
+  el.textContent = msg;
+  el.classList.toggle('hidden', !msg);
+}
+
+document.getElementById('btn-generate').addEventListener('click', () => {
+  const n = +document.getElementById('gen-count').value;
+  setupQs = setupQs.filter(q => q.text.trim());  // drop blank rows so new questions don't land after them
+  const { picked, repeats } = pickQuestions(n);
+  setupQs.push(...picked.map(q => ({ ...q })));
+  renderSetupQs();
+  showGenNote(repeats ? "You've used most of the question bank, so some of these were asked in earlier games." : '');
+});
+
+document.getElementById('btn-clear-qs').addEventListener('click', () => {
+  setupQs = [];
+  renderSetupQs();
+  showGenNote('');
+});
+
+function swapQuestion(i) {
+  const { picked } = pickQuestions(1);
+  if (!picked.length) return;
+  setupQs[i] = { ...picked[0] };
+  renderSetupQs();
+}
+
 function renderSetupQs() {
   const el = document.getElementById('questions-list');
   if (!setupQs.length) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0">No questions yet.</div>`;
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0">No questions yet — generate some or write your own.</div>`;
     return;
   }
   el.innerHTML = setupQs.map((q, i) => `
     <div class="q-entry">
       <div class="q-entry-header">
-        <div class="q-num">Q${i+1}</div>
-        <button class="remove-btn" data-i="${i}">×</button>
+        <div class="q-num">Q${i+1}${q.cat ? `<span class="q-cat">${esc(q.cat)}</span>` : ''}</div>
+        <div class="q-entry-tools">
+          <button class="swap-btn" data-i="${i}" title="Swap for a different question">↻</button>
+          <button class="remove-btn" data-i="${i}" title="Remove">×</button>
+        </div>
       </div>
-      <textarea placeholder="Enter question..." data-i="${i}">${q.text}</textarea>
+      <textarea placeholder="Enter question..." data-i="${i}">${esc(q.text)}</textarea>
       <div class="answer-toggle">
         <button class="answer-btn ${q.answer===true?'sel-true':''}"  data-i="${i}" data-v="true">✓ TRUE</button>
         <button class="answer-btn ${q.answer===false?'sel-false':''}" data-i="${i}" data-v="false">✗ FALSE</button>
       </div>
-      <input type="text" class="q-context-input" data-i="${i}" placeholder="Answer context (optional) — shown on reveal" value="${q.context||''}" style="margin-top:10px;font-size:13px;padding:9px 12px;">
+      <input type="text" class="q-context-input" data-i="${i}" placeholder="Answer context (optional) — shown on reveal" value="${esc(q.context)}" style="margin-top:10px;font-size:13px;padding:9px 12px;">
       <div class="dupe-warning" id="dupe-${i}">⚠ This question has been asked before</div>
     </div>`).join('');
+  el.querySelectorAll('.swap-btn').forEach(b => b.addEventListener('click', () => swapQuestion(+b.dataset.i)));
   el.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', () => {
     setupQs.splice(+b.dataset.i, 1); renderSetupQs();
   }));
@@ -711,7 +922,7 @@ function renderSetupNames() {
   const el = document.getElementById('names-list');
   if (!setupNames.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px">No names yet.</div>`; return; }
   el.innerHTML = setupNames.map((n,i) => `
-    <div class="name-pill">${n}<button data-i="${i}">×</button></div>`).join('');
+    <div class="name-pill">${esc(n)}<button data-i="${i}">×</button></div>`).join('');
   el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     setupNames.splice(+b.dataset.i, 1); renderSetupNames();
   }));
@@ -758,18 +969,16 @@ document.getElementById('btn-launch').addEventListener('click', async () => {
       fSet('questionLog', logObj).catch(() => {});
     }).catch(() => {});
 
-    // Write game state — this is the critical write
+    // Write game state — players wait in the lobby until the moderator hits Start
     await fSet('game', {
-      status: 'active', currentQ: 0, totalQ: validQs.length,
+      status: 'lobby', currentQ: 0, totalQ: validQs.length,
       questions: validQs.map(q => ({ text: q.text, context: q.context || '' })),
       answers:   validQs.map(q => q.answer),
       players:   setupNames,
       scores,
       responses: { _placeholder: true },
       revealed:  false,
-      isSuddenDeath: false,
-      sdWinner: '',
-      winner:   '',
+      winner:    '',
       connected: {},
     });
 
@@ -778,47 +987,85 @@ document.getElementById('btn-launch').addEventListener('click', async () => {
     console.error('Launch failed:', e);
     errEl.textContent = 'Launch failed: ' + (e.message || 'Firebase write error. Check console.');
     errEl.classList.remove('hidden');
-    launchBtn.disabled = false;
-    launchBtn.textContent = 'Launch Game →';
+    resetLaunchBtn();
   }
 });
 
-// ── MOD DASHBOARD ─────────────────────────────────────────────
+// ── MOD LOBBY + DASHBOARD ─────────────────────────────────────
 function modDashboard() {
   modEndShown = false;
+  modQ        = -1;
+  revealedQ   = -1;
   stopListen();
-  showScreen('screen-mod-game');
-  document.getElementById('btn-reveal').disabled = true;
-  document.getElementById('btn-next').disabled   = true;
 
   unsub = fOn('game', snap => {
     gameSnap = snap.val();
     if (!gameSnap) return;
-    if (gameSnap.status === 'ended' && !modEndShown) {
-      modEndShown = true;
-      showModEnd(gameSnap);
+    if (gameSnap.status === 'ended') {
+      if (!modEndShown) { modEndShown = true; showModEnd(gameSnap); }
       return;
     }
-    renderModDash();
+    if (gameSnap.status === 'lobby') renderModLobby();
+    else renderModDash();
   });
 }
+
+function renderModLobby() {
+  const g         = gameSnap;
+  const players   = g.players   || [];
+  const connected = g.connected || {};
+  const joined    = players.filter(n => connected[safeKey(n)]);
+  showScreen('screen-mod-lobby');
+
+  document.getElementById('lobby-sub').textContent =
+    `${g.totalQ} question${g.totalQ===1?'':'s'} · ${ANSWER_MS/1000} seconds each`;
+  document.getElementById('lobby-url').textContent = location.host || 'the game link';
+  const countEl = document.getElementById('lobby-count');
+  countEl.textContent = `${joined.length}/${players.length}`;
+  countEl.classList.toggle('all-answered-color', players.length > 0 && joined.length === players.length);
+  document.getElementById('lobby-players').innerHTML = players.map(n => {
+    const isIn = !!connected[safeKey(n)];
+    return `<div class="lobby-pill ${isIn?'joined':''}">${isIn?'✓ ':''}${esc(n)}</div>`;
+  }).join('');
+  document.getElementById('btn-start').disabled = !joined.length;
+}
+
+document.getElementById('btn-start').addEventListener('click', async () => {
+  if (!gameSnap || gameSnap.status !== 'lobby') return;
+  document.getElementById('btn-start').disabled = true;
+  await fUpd('game', { status: 'active', currentQ: 0, responses: { _placeholder: true }, revealed: false });
+});
+
+document.getElementById('btn-lobby-back').addEventListener('click', async () => {
+  stopListen();
+  await fSet('game', null);  // sends waiting players back to the home screen
+  resetLaunchBtn();
+  showScreen('screen-mod-setup');
+});
+
+document.getElementById('btn-lobby-add').addEventListener('click', () => flyAdd('lobby-add-input', 'lobby-add-error'));
+document.getElementById('lobby-add-input').addEventListener('keydown', e => { if (e.key==='Enter') flyAdd('lobby-add-input', 'lobby-add-error'); });
 
 function renderModDash() {
   const g   = gameSnap;
   const q   = g.questions[g.currentQ];
   const ans = g.answers[g.currentQ];
-  const allPlayers = g.players || [];
-  // Only show players who have connected (selected their name)
-  // Fall back to allPlayers if nobody has connected yet (e.g. local testing)
-  const connected = g.connected ? Object.keys(g.connected) : [];
-  const pl  = connected.length > 0 ? allPlayers.filter(n => connected.includes(safeKey(n))) : allPlayers;
-  const rs  = g.responses || {};
-  const sc  = g.scores    || {};
+  const pl  = activePlayers(g);
+  const rs  = currentResponses(g);
+  const sc  = g.scores      || {};
+  const pts = g.roundPoints || {};
+  showScreen('screen-mod-game');
 
-  document.getElementById('mod-q-prog').textContent =
-    `QUESTION ${g.currentQ+1} OF ${g.totalQ}${g.isSuddenDeath?' — SUDDEN DEATH':''}`;
+  // Start the clock the first time this question shows up
+  if (g.currentQ !== modQ) {
+    modQ = g.currentQ;
+    modQStart = Date.now();
+    renderTimer('mod', ANSWER_MS);
+  }
+
+  document.getElementById('mod-q-prog').textContent = `QUESTION ${g.currentQ+1} OF ${g.totalQ}`;
   document.getElementById('mod-q-text').textContent = q?.text || '—';
-  document.getElementById('mod-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
+  document.getElementById('mod-timer').classList.toggle('hidden', !!g.revealed);
 
   // Answer badge
   if (g.revealed) {
@@ -835,108 +1082,99 @@ function renderModDash() {
     document.getElementById('mod-ans-context').classList.add('hidden');
   }
 
-  // Counts (filter out internal _placeholder key)
-  const answered    = Object.keys(rs).filter(k => k !== '_placeholder').length;
-  const total       = pl.length;
-  const allAnswered = answered >= total && total > 0;
+  // Counts — a timed-out player is "in" but hasn't answered
+  const answered = pl.filter(n => rs[safeKey(n)] && !rs[safeKey(n)].timedOut).length;
+  const total    = pl.length;
+  const allIn    = total > 0 && pl.every(n => rs[safeKey(n)]);
   document.getElementById('answered-count').textContent = `${answered}/${total}`;
-  document.getElementById('answered-count').classList.toggle('all-answered-color', allAnswered);
-  document.getElementById('all-ans-msg').classList.toggle('hidden', !allAnswered);
-  document.getElementById('btn-reveal').disabled = g.revealed;
+  document.getElementById('answered-count').classList.toggle('all-answered-color', allIn);
+  document.getElementById('all-ans-msg').classList.toggle('hidden', !allIn);
+  document.getElementById('btn-reveal').disabled = !!g.revealed;
   document.getElementById('btn-next').disabled   = !g.revealed;
+  document.getElementById('btn-next').textContent = g.currentQ + 1 >= g.totalQ ? 'Final Results →' : 'Next Question →';
 
-  // Response cards
+  // Response cards — answers stay hidden until the reveal so a shared screen doesn't give them away
   document.getElementById('mod-responses').innerHTML = pl.map(name => {
-    const r = rs[safeKey(name)];
-    const hasAns = r != null;
+    const k = safeKey(name);
+    const r = rs[k];
     let cls = '', icon = `<span class="wait-dot"></span>`, status = 'waiting...', speed = '';
-    if (hasAns) {
-      icon = r.answer ? '✓' : '✗';
-      status = r.answer ? 'TRUE' : 'FALSE';
-      cls = 'answered';
-      if (g.revealed) {
-        cls = r.answer === ans ? 'correct' : 'wrong';
-        if (r.time != null)
-          speed = `<div class="speed-tag">${(r.time/1000).toFixed(2)}s</div>`;
-      }
+    if (r && r.timedOut) {
+      icon = '⏰'; status = 'TIME UP'; cls = g.revealed ? 'wrong' : 'answered';
+    } else if (r && g.revealed) {
+      icon   = r.answer ? '✓' : '✗';
+      cls    = r.answer === ans ? 'correct' : 'wrong';
+      status = `+${pts[k] ?? pointsFor(r, ans)}`;
+      speed  = `<div class="speed-tag">${(r.time/1000).toFixed(2)}s</div>`;
+    } else if (r) {
+      icon = '🔒'; status = 'LOCKED IN'; cls = 'answered';
+    } else if (g.revealed) {
+      icon = '—'; status = 'NO ANSWER'; cls = 'wrong';
     }
     return `<div class="response-card ${cls}">
-      <div class="response-name">${name}</div>
+      <div class="response-name">${esc(name)}</div>
       <div class="response-answer">${icon}</div>
       <div class="response-status">${status}</div>${speed}
     </div>`;
   }).join('');
 
-  renderLB('mod-lb', sc, pl, g.responseTimes);
+  renderLB('mod-lb', sc, pl, g.totalTimes);
+
+  // Everyone's answered or timed out — no need to wait out the clock
+  if (!g.revealed && allIn) revealAnswer();
 }
 
-// Reveal
-document.getElementById('btn-reveal').addEventListener('click', async () => {
-  const g   = gameSnap; if (!g) return;
-  const ans = g.answers[g.currentQ];
-  const pl  = g.players   || [];
-  const rs  = g.responses || {};
-  const sc  = { ...(g.scores||{}) };
-  const sdT = {};
+// Runs every tick while the dashboard is showing; reveals once time is up
+function modTick() {
+  const g = gameSnap;
+  if (!g || g.status !== 'active' || g.revealed) return;
+  const elapsed = Date.now() - modQStart;
+  renderTimer('mod', Math.max(0, ANSWER_MS - elapsed));
+  if (elapsed > ANSWER_MS + GRACE_MS) revealAnswer();
+}
 
-  pl.forEach(name => {
-    const r = rs[name];
-    if (r!=null && r.answer===ans) {
-      sc[safeKey(name)] = (sc[safeKey(name)]||0) + 1;
-      if (r.time!=null) sdT[name] = r.time;  // always collect times for tiebreaking
-    }
+async function revealAnswer() {
+  const g = gameSnap;
+  if (!g || g.status !== 'active' || g.revealed || revealedQ === g.currentQ) return;
+  revealedQ = g.currentQ;
+  const ans = g.answers[g.currentQ];
+  const rs  = currentResponses(g);
+  const sc  = { ...(g.scores     || {}) };
+  const tt  = { ...(g.totalTimes || {}) };
+  const pts = {};
+
+  (g.players || []).forEach(name => {
+    const k = safeKey(name);
+    pts[k] = pointsFor(rs[k], ans);
+    sc[k]  = (sc[k] || 0) + pts[k];
+    if (pts[k]) tt[k] = (tt[k] || 0) + rs[k].time;  // tiebreak: less total time on correct answers
   });
 
-  // SD winner = fastest correct answerer
-  let sdWinner = '';
-  if (g.isSuddenDeath && Object.keys(sdT).length)
-    sdWinner = Object.entries(sdT).sort((a,b)=>a[1]-b[1])[0][0];
+  await fUpd('game', { revealed: true, scores: sc, roundPoints: pts, totalTimes: tt });
+}
 
-  await fUpd('game', { revealed: true, scores: sc, sdWinner, responseTimes: sdT });
-});
+document.getElementById('btn-reveal').addEventListener('click', revealAnswer);
 
 // Next
 document.getElementById('btn-next').addEventListener('click', async () => {
-  const g   = gameSnap; if (!g) return;
-  const sc  = g.scores  || {};
-  const pl  = g.players || [];
-
-  if (g.isSuddenDeath) {
-    if (g.sdWinner) {
-      await fUpd('game', { status: 'ended', winner: g.sdWinner }); return;
-    }
-    const ni = g.currentQ + 1;
-    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl,g.responseTimes) }); return; }
-    await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false }); return;
-  }
-
-  const winners = pl.filter(n => (sc[n]||0) >= WIN_SCORE);
-  if (winners.length === 1) { await fUpd('game', { status: 'ended', winner: winners[0] }); return; }
-  if (winners.length  >  1) {
-    const ni = g.currentQ + 1;
-    if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: winners[0] }); return; }
-    await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false, isSuddenDeath: true }); return;
-  }
-
+  const g = gameSnap; if (!g || !g.revealed) return;
   const ni = g.currentQ + 1;
-  if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: getTopPlayer(sc,pl,g.responseTimes) }); return; }
-  await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false });
+  if (ni >= g.totalQ) { await fUpd('game', { status: 'ended', winner: pickWinner(g) }); return; }
+  await fUpd('game', { currentQ: ni, responses: { _placeholder: true }, revealed: false, roundPoints: null });
 });
 
 // End
 document.getElementById('btn-end').addEventListener('click', async () => {
   if (!gameSnap) return;
-  const winner = getTopPlayer(gameSnap.scores||{}, gameSnap.players||[], gameSnap.responseTimes);
-  await fUpd('game', { status: 'ended', winner });
+  await fUpd('game', { status: 'ended', winner: pickWinner(gameSnap) });
 });
 
-// Add player on the fly
-document.getElementById('btn-fly-add').addEventListener('click', flyAdd);
-document.getElementById('fly-input').addEventListener('keydown', e => { if (e.key==='Enter') flyAdd(); });
+// Add player on the fly — from the lobby or mid-game. They show up once they pick their name.
+document.getElementById('btn-fly-add').addEventListener('click', () => flyAdd('fly-input', 'fly-error'));
+document.getElementById('fly-input').addEventListener('keydown', e => { if (e.key==='Enter') flyAdd('fly-input', 'fly-error'); });
 
-async function flyAdd() {
-  const inp   = document.getElementById('fly-input');
-  const errEl = document.getElementById('fly-error');
+async function flyAdd(inputId, errorId) {
+  const inp   = document.getElementById(inputId);
+  const errEl = document.getElementById(errorId);
   const name  = inp.value.trim();
   errEl.classList.add('hidden');
   if (!name) return;
@@ -948,30 +1186,30 @@ async function flyAdd() {
   }
   const newPlayers = [...players, name];
   const newScores  = { ...(gameSnap.scores||{}), [safeKey(name)]: 0 };
-  const connected  = gameSnap.connected || {};
-  connected[safeKey(name)]  = true;
-  await fUpd('game', { players: newPlayers, scores: newScores, connected });
+  await fUpd('game', { players: newPlayers, scores: newScores });
   inp.value = '';
 }
 
 // ── MOD END ───────────────────────────────────────────────────
 async function showModEnd(g) {
   stopListen();
-  const sc     = g.scores  || {};
-  const pl     = g.players || [];
-  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl, g.responseTimes);
-  document.getElementById('mod-end-winner').textContent = winner || '—';
-  renderLB('mod-end-lb', sc, pl, g.responseTimes);
+  const winner = g.winner || '';
+  document.getElementById('mod-end-winner').textContent = winner || 'No winner';
+  renderLB('mod-end-lb', g.scores || {}, activePlayers(g), g.totalTimes);
   showScreen('screen-mod-end');
+  if (!winner) return;
 
   try {
     const snap   = await fGet('stats');
     const stats  = snap.val() || {};
-    const pWins  = stats.playerWins || {};
-    if (winner) pWins[winner] = (pWins[winner]||0) + 1;
-    let leaderName='', leaderWins=0;
-    Object.entries(pWins).forEach(([n,w]) => { if (w>leaderWins) { leaderWins=w; leaderName=n; } });
-    await fSet('stats', { recentWinner: winner||'', allTimeLeader: leaderName, allTimeWins: leaderWins, playerWins: pWins });
+    const pWins  = stats.playerWins  || {};
+    const pNames = stats.playerNames || {};
+    // Firebase keys can't contain "." etc — key by safeKey, remember the display name
+    const k = safeKey(winner);
+    pWins[k]  = (pWins[k]||0) + 1;
+    pNames[k] = winner;
+    const champ = getChampions(pWins, pNames);
+    await fSet('stats', { recentWinner: winner, allTimeLeader: champ.names.join(' & '), allTimeWins: champ.wins, playerWins: pWins, playerNames: pNames });
   } catch(e) { console.warn('Stats failed', e); }
 }
 
@@ -1029,113 +1267,156 @@ document.getElementById('btn-part-back').addEventListener('click', () => {
 async function pickName(name) {
   myName = name;
   submittedForQ = -1;
-  sdTimer = null;
+  qShownAt = null;
+  timerForQ = -1;
   stopListen();
   document.getElementById('wait-name').textContent = name;
+  document.getElementById('wait-count').textContent = '';
   document.getElementById('p-name-tag').textContent = name.toUpperCase();
   showScreen('screen-part-wait');
 
   // Register as connected — mod dashboard tracks this list
   try {
-    const snap = await fGet('game/connected');
-    const connected = snap.val() || {};
-    connected[safeKey(name)] = true;
-    await fUpd('game', { connected });
+    await fSet(`game/connected/${safeKey(name)}`, true);
   } catch(e) {}
 
   unsub = fOn('game', snap => {
     const g = snap.val();
-    if (!g) return;
+    if (!g) { goHome(); return; }  // moderator cancelled the game
     gameSnap = g;
+    if (g.status === 'lobby')  renderPartWait(g);
     if (g.status === 'active') renderPartGame(g);
     if (g.status === 'ended')  showPartEnd(g);
   });
 }
 
+function renderPartWait(g) {
+  const n = Object.keys(g.connected || {}).length;
+  document.getElementById('wait-count').textContent = `${n} player${n===1?'':'s'} in`;
+  showScreen('screen-part-wait');
+}
+
 function renderPartGame(g) {
   const q   = g.questions[g.currentQ];
-  const rs  = g.responses || {};
-  const my  = rs[safeKey(myName)];
+  const k   = safeKey(myName);
+  const my  = currentResponses(g)[k];
+  const ans = g.answers[g.currentQ];
   showScreen('screen-part-game');
 
   document.getElementById('p-q-prog').textContent   = `QUESTION ${g.currentQ+1} OF ${g.totalQ}`;
   document.getElementById('p-question').textContent  = q?.text || '—';
-  document.getElementById('p-score').textContent     = g.scores?.[safeKey(myName)] || 0;
-  document.getElementById('p-sd-banner').classList.toggle('hidden', !g.isSuddenDeath);
+  document.getElementById('p-score').textContent     = g.scores?.[k] || 0;
 
-  // Always track answer timing — reset on each new question
-  if (submittedForQ !== g.currentQ && my == null) {
-    sdTimer = Date.now();
+  // Start this player's clock the first time they see the question — this listener
+  // also fires whenever anyone else answers, which must not restart it
+  if (timerForQ !== g.currentQ) {
+    timerForQ = g.currentQ;
+    qShownAt  = g.revealed || my ? null : Date.now();
+    renderTimer('p', ANSWER_MS);
   }
+  document.getElementById('p-timer').classList.toggle('hidden', !!g.revealed || qShownAt == null);
 
   const ansDiv  = document.getElementById('p-ans-btns');
   const waitDiv = document.getElementById('p-waiting');
+  const toDiv   = document.getElementById('p-timeout');
   const revDiv  = document.getElementById('p-reveal-area');
 
   if (g.revealed) {
     ansDiv.classList.add('hidden');
     waitDiv.classList.add('hidden');
-    const correct = my != null && my.answer === g.answers[g.currentQ];
-    const noAns   = my == null;
+    toDiv.classList.add('hidden');
+    const pts      = g.roundPoints?.[k] ?? pointsFor(my, ans);
+    const correct  = pts > 0;
+    const timedOut = !!my?.timedOut;
+    const label    = correct ? 'Correct!' : timedOut ? "You didn't answer in time!" : my ? 'Wrong' : 'No Answer';
+    const rank     = rankPlayers(g.scores || {}, activePlayers(g), g.totalTimes).indexOf(myName) + 1;
     revDiv.innerHTML = `
       <div class="reveal-result ${correct?'correct':'wrong'}">
-        <div class="big-icon">${correct?'🎉':(noAns?'⏰':'😬')}</div>
-        <div class="result-label">${correct?'Correct!':(noAns?'No Answer':'Wrong')}</div>
-        <div class="answer-shown">Answer was: <strong>${g.answers[g.currentQ]?'TRUE':'FALSE'}</strong></div>
-        ${g.questions[g.currentQ] && g.questions[g.currentQ].context ? `<div class="answer-context">${g.questions[g.currentQ].context}</div>` : ''}
+        <div class="big-icon">${correct ? '🎉' : (my && !timedOut ? '😬' : '⏰')}</div>
+        <div class="result-label">${label}</div>
+        <div class="points-earned">+${pts} points${correct ? ` · ${(my.time/1000).toFixed(2)}s` : ''}</div>
+        <div class="answer-shown">Answer was: <strong>${ans ? 'TRUE' : 'FALSE'}</strong></div>
+        ${q && q.context ? `<div class="answer-context">${esc(q.context)}</div>` : ''}
+        ${rank ? `<div class="rank-line">You're in ${ordinal(rank)} place</div>` : ''}
       </div>`;
     submittedForQ = -1;
-  } else if (my != null) {
+  } else if (my) {
     ansDiv.classList.add('hidden');
-    waitDiv.classList.remove('hidden');
     revDiv.innerHTML = '';
-  } else {
+    waitDiv.classList.toggle('hidden', !!my.timedOut);
+    toDiv.classList.toggle('hidden', !my.timedOut);
+    if (!my.timedOut)
+      document.getElementById('p-waiting-text').textContent =
+        `Locked in ${my.answer ? 'TRUE' : 'FALSE'} at ${(my.time/1000).toFixed(2)}s — waiting for the reveal`;
+  } else if (submittedForQ !== g.currentQ) {
     // New question — reset buttons
-    if (submittedForQ !== g.currentQ) {
-      document.getElementById('btn-true').className  = 'answer-big true-btn';
-      document.getElementById('btn-false').className = 'answer-big false-btn';
-      document.getElementById('btn-true').disabled   = false;
-      document.getElementById('btn-false').disabled  = false;
-    }
+    document.getElementById('btn-true').className  = 'answer-big true-btn';
+    document.getElementById('btn-false').className = 'answer-big false-btn';
+    document.getElementById('btn-true').disabled   = false;
+    document.getElementById('btn-false').disabled  = false;
     ansDiv.classList.remove('hidden');
     waitDiv.classList.add('hidden');
+    toDiv.classList.add('hidden');
     revDiv.innerHTML = '';
   }
+}
+
+// Runs every tick while the question screen is showing; times the player out at 10s
+function partTick() {
+  const g = gameSnap;
+  if (!g || g.status !== 'active' || g.revealed || qShownAt == null) return;
+  const left = Math.max(0, ANSWER_MS - (Date.now() - qShownAt));
+  renderTimer('p', left);
+  if (left === 0 && submittedForQ !== g.currentQ) timeOut();
+}
+
+async function timeOut() {
+  const q = gameSnap.currentQ;
+  submittedForQ = q;
+  document.getElementById('p-ans-btns').classList.add('hidden');
+  document.getElementById('p-waiting').classList.add('hidden');
+  document.getElementById('p-timeout').classList.remove('hidden');
+  // Lets the moderator reveal as soon as everyone's in, instead of waiting out the clock
+  await fSet(`game/responses/${safeKey(myName)}`, { timedOut: true, q });
 }
 
 document.getElementById('btn-true').addEventListener('click',  () => submitAns(true));
 document.getElementById('btn-false').addEventListener('click', () => submitAns(false));
 
 async function submitAns(val) {
-  if (!gameSnap || submittedForQ === gameSnap.currentQ) return;
-  submittedForQ = gameSnap.currentQ;
-
-  const elapsed = sdTimer ? Date.now() - sdTimer : null;
+  const g = gameSnap;
+  if (!g || g.revealed || qShownAt == null || submittedForQ === g.currentQ) return;
+  const elapsed = Date.now() - qShownAt;
+  if (elapsed > ANSWER_MS) { timeOut(); return; }
+  submittedForQ = g.currentQ;
 
   document.getElementById('btn-true').className  = val  ? 'answer-big true-btn sel-true'  : 'answer-big true-btn';
   document.getElementById('btn-false').className = !val ? 'answer-big false-btn sel-false' : 'answer-big false-btn';
   document.getElementById('btn-true').disabled   = true;
   document.getElementById('btn-false').disabled  = true;
   document.getElementById('p-ans-btns').classList.add('hidden');
+  document.getElementById('p-waiting-text').textContent = 'Locked in — waiting for the reveal';
   document.getElementById('p-waiting').classList.remove('hidden');
 
-  const payload = { answer: val, time: elapsed !== null ? elapsed : 0 };
-  await fUpd(`game/responses/${safeKey(myName)}`, payload);
+  await fSet(`game/responses/${safeKey(myName)}`, { answer: val, time: elapsed, q: g.currentQ });
 }
 
 function showPartEnd(g) {
   stopListen();
-  const sc     = g.scores  || {};
-  const pl     = g.players || [];
-  const winner = g.winner  || g.sdWinner || getTopPlayer(sc, pl, g.responseTimes);
-  document.getElementById('p-end-winner').textContent = winner || '—';
-  renderLB('p-end-lb', sc, pl, g.responseTimes);
+  document.getElementById('p-end-winner').textContent = g.winner || 'No winner';
+  renderLB('p-end-lb', g.scores || {}, activePlayers(g), g.totalTimes);
   showScreen('screen-part-end');
 }
 
 document.getElementById('btn-p-home').addEventListener('click', goHome);
 
 // ── INIT ─────────────────────────────────────────────────────
+// One clock drives both countdowns; each side only acts while its game screen is showing
+setInterval(() => {
+  if (isActive('screen-mod-game'))  modTick();
+  if (isActive('screen-part-game')) partTick();
+}, 100);
+
 goHome();
 </script>
 </body>
