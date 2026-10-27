@@ -135,17 +135,20 @@ textarea { resize: vertical; min-height: 80px; }
 .answer-big { flex: 1; aspect-ratio: 1; max-height: 200px; border-radius: 20px; border: 2px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 56px; transition: all 0.18s; gap: 8px; }
 .answer-big .alabel { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
 .answer-big .ans-icon { font-size: 56px; color: var(--muted); transition: color 0.18s; font-style: normal; }
-.answer-big:hover .ans-icon { color: var(--text); }
-.answer-big.true-btn:hover  { background: rgba(46,204,113,0.12); border-color: var(--green); transform: scale(1.03); }
-.answer-big.false-btn:hover { background: rgba(224,60,60,0.12);  border-color: var(--red);   transform: scale(1.03); }
-.answer-big.true-btn:hover .ans-icon  { color: var(--green); }
-.answer-big.false-btn:hover .ans-icon { color: var(--red); }
+/* Hover only for mice, and only once the mouse moves after a question loads —
+   touch screens leave :hover stuck on the last spot tapped */
+@media (hover: hover) {
+  .answer-btns:not(.fresh) .answer-big:hover .ans-icon { color: var(--text); }
+  .answer-btns:not(.fresh) .answer-big.true-btn:hover  { background: rgba(46,204,113,0.12); border-color: var(--green); transform: scale(1.03); }
+  .answer-btns:not(.fresh) .answer-big.false-btn:hover { background: rgba(224,60,60,0.12);  border-color: var(--red);   transform: scale(1.03); }
+  .answer-btns:not(.fresh) .answer-big.true-btn:hover .ans-icon  { color: var(--green); }
+  .answer-btns:not(.fresh) .answer-big.false-btn:hover .ans-icon { color: var(--red); }
+}
 .answer-big.sel-true  { background: rgba(46,204,113,0.18); border-color: var(--green); }
 .answer-big.sel-false { background: rgba(224,60,60,0.18);  border-color: var(--red); }
 .answer-big.sel-true .ans-icon  { color: var(--green); }
 .answer-big.sel-false .ans-icon { color: var(--red); }
 
-.waiting-msg { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; letter-spacing: 1px; }
 .waiting-dots span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin: 0 3px; animation: bounce-dot 1.2s ease-in-out infinite; }
 .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
 .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -158,6 +161,9 @@ textarea { resize: vertical; min-height: 80px; }
 .reveal-result .result-label { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; }
 .reveal-result.correct .result-label { color: var(--green); }
 .reveal-result.wrong   .result-label { color: var(--red); }
+.reveal-result.waiting { background: var(--surface); border: 1px solid var(--border); }
+.reveal-result.waiting .result-label { color: var(--gold); }
+.reveal-result .waiting-dots { margin-top: 18px; }
 .reveal-result .answer-shown { font-size: 14px; color: var(--muted); margin-top: 6px; }
 @keyframes pop-in { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
@@ -387,11 +393,11 @@ select:focus { border-color: var(--gold); }
           <div class="answered-count" id="answered-count">0/0</div>
           <div class="answered-label">answered</div>
         </div>
-        <div id="all-ans-msg" class="hidden" style="color:var(--green);font-size:13px;font-weight:600">✓ All answered!</div>
+        <div id="all-ans-msg" class="hidden" style="font-size:13px;font-weight:600"></div>
       </div>
       <div class="responses-grid" id="mod-responses"></div>
       <div class="action-row">
-        <button class="btn btn-gold" id="btn-reveal" disabled>Reveal Now</button>
+        <button class="btn btn-gold" id="btn-reveal" disabled>Reveal Answer</button>
         <button class="btn btn-outline" id="btn-next" disabled>Next Question →</button>
         <button class="btn btn-danger" id="btn-end">End Game</button>
       </div>
@@ -457,14 +463,19 @@ select:focus { border-color: var(--gold); }
         <span class="ans-icon">✗</span><span class="alabel">FALSE</span>
       </button>
     </div>
-    <div class="waiting-msg hidden" id="p-waiting">
+    <div class="reveal-result waiting hidden" id="p-waiting">
+      <div class="big-icon">🔒</div>
+      <div class="result-label">Answer locked in</div>
+      <div class="answer-shown" id="p-waiting-text"></div>
       <div class="waiting-dots"><span></span><span></span><span></span></div>
-      <div id="p-waiting-text">Waiting for others...</div>
+      <div class="answer-shown">Wait for the answer to be revealed</div>
     </div>
     <div class="reveal-result wrong hidden" id="p-timeout">
       <div class="big-icon">⏰</div>
       <div class="result-label">You didn't answer in time!</div>
       <div class="answer-shown">No points this round</div>
+      <div class="waiting-dots"><span></span><span></span><span></span></div>
+      <div class="answer-shown">Wait for the answer to be revealed</div>
     </div>
     <div id="p-reveal-area"></div>
   </div>
@@ -537,7 +548,6 @@ function fOn(path, cb)      { return onValue(fRef(path), cb); } // returns unsub
 // ── CONSTANTS ─────────────────────────────────────────────────
 const PASSWORD   = "leader";
 const ANSWER_MS  = 10000;  // time each player gets per question
-const GRACE_MS   = 1500;   // extra wait on the moderator side for slow connections before auto-reveal
 const MAX_POINTS = 100;    // correct answer given instantly
 const MIN_POINTS = 50;     // correct answer given right at the buzzer
 
@@ -1088,7 +1098,7 @@ function renderModDash() {
   const allIn    = total > 0 && pl.every(n => rs[safeKey(n)]);
   document.getElementById('answered-count').textContent = `${answered}/${total}`;
   document.getElementById('answered-count').classList.toggle('all-answered-color', allIn);
-  document.getElementById('all-ans-msg').classList.toggle('hidden', !allIn);
+  renderRevealHint(g, allIn);
   document.getElementById('btn-reveal').disabled = !!g.revealed;
   document.getElementById('btn-next').disabled   = !g.revealed;
   document.getElementById('btn-next').textContent = g.currentQ + 1 >= g.totalQ ? 'Final Results →' : 'Next Question →';
@@ -1118,18 +1128,25 @@ function renderModDash() {
   }).join('');
 
   renderLB('mod-lb', sc, pl, g.totalTimes);
-
-  // Everyone's answered or timed out — no need to wait out the clock
-  if (!g.revealed && allIn) revealAnswer();
 }
 
-// Runs every tick while the dashboard is showing; reveals once time is up
+// Nudge the moderator once everyone's in or the clock runs out — revealing is always their call
+let modAllIn = false;
+function renderRevealHint(g, allIn = modAllIn) {
+  modAllIn = allIn;
+  const el     = document.getElementById('all-ans-msg');
+  const timeUp = Date.now() - modQStart >= ANSWER_MS;
+  el.textContent = allIn ? "✓ Everyone's in — reveal when ready" : "⏰ Time's up — reveal when ready";
+  el.style.color = allIn ? 'var(--green)' : 'var(--gold)';
+  el.classList.toggle('hidden', !!g.revealed || !(allIn || timeUp));
+}
+
+// Runs every tick while the dashboard is showing
 function modTick() {
   const g = gameSnap;
   if (!g || g.status !== 'active' || g.revealed) return;
-  const elapsed = Date.now() - modQStart;
-  renderTimer('mod', Math.max(0, ANSWER_MS - elapsed));
-  if (elapsed > ANSWER_MS + GRACE_MS) revealAnswer();
+  renderTimer('mod', Math.max(0, ANSWER_MS - (Date.now() - modQStart)));
+  renderRevealHint(g);
 }
 
 async function revealAnswer() {
@@ -1347,13 +1364,14 @@ function renderPartGame(g) {
     toDiv.classList.toggle('hidden', !my.timedOut);
     if (!my.timedOut)
       document.getElementById('p-waiting-text').textContent =
-        `Locked in ${my.answer ? 'TRUE' : 'FALSE'} at ${(my.time/1000).toFixed(2)}s — waiting for the reveal`;
+        `You picked ${my.answer ? 'TRUE' : 'FALSE'} in ${(my.time/1000).toFixed(2)}s`;
   } else if (submittedForQ !== g.currentQ) {
-    // New question — reset buttons
+    // New question — reset buttons, with no hover highlight until the mouse actually moves
     document.getElementById('btn-true').className  = 'answer-big true-btn';
     document.getElementById('btn-false').className = 'answer-big false-btn';
     document.getElementById('btn-true').disabled   = false;
     document.getElementById('btn-false').disabled  = false;
+    ansDiv.classList.add('fresh');
     ansDiv.classList.remove('hidden');
     waitDiv.classList.add('hidden');
     toDiv.classList.add('hidden');
@@ -1376,12 +1394,16 @@ async function timeOut() {
   document.getElementById('p-ans-btns').classList.add('hidden');
   document.getElementById('p-waiting').classList.add('hidden');
   document.getElementById('p-timeout').classList.remove('hidden');
-  // Lets the moderator reveal as soon as everyone's in, instead of waiting out the clock
+  // Shows up as "TIME UP" on the moderator's screen so they know everyone's in
   await fSet(`game/responses/${safeKey(myName)}`, { timedOut: true, q });
 }
 
 document.getElementById('btn-true').addEventListener('click',  () => submitAns(true));
 document.getElementById('btn-false').addEventListener('click', () => submitAns(false));
+// Browsers send zero-distance moves when content changes under a still mouse — ignore those
+document.getElementById('p-ans-btns').addEventListener('mousemove', e => {
+  if (e.movementX || e.movementY) e.currentTarget.classList.remove('fresh');
+});
 
 async function submitAns(val) {
   const g = gameSnap;
@@ -1395,7 +1417,7 @@ async function submitAns(val) {
   document.getElementById('btn-true').disabled   = true;
   document.getElementById('btn-false').disabled  = true;
   document.getElementById('p-ans-btns').classList.add('hidden');
-  document.getElementById('p-waiting-text').textContent = 'Locked in — waiting for the reveal';
+  document.getElementById('p-waiting-text').textContent = `You picked ${val ? 'TRUE' : 'FALSE'} in ${(elapsed/1000).toFixed(2)}s`;
   document.getElementById('p-waiting').classList.remove('hidden');
 
   await fSet(`game/responses/${safeKey(myName)}`, { answer: val, time: elapsed, q: g.currentQ });
